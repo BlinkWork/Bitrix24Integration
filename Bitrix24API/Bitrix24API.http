@@ -1,0 +1,6 @@
+@Bitrix24API_HostAddress = http://localhost:5010
+
+GET {{Bitrix24API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
