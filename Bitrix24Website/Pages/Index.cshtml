@@ -1,0 +1,262 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Quản lý danh sách liên hệ";
+}
+
+<div class="bg-white shadow-md rounded-lg p-6">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4 md:mb-0">Quản lý danh sách liên hệ</h1>
+
+        <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+            <form method="get" class="flex-grow">
+                <div class="relative">
+                    <input type="text" name="SearchString" value="@Model.SearchString"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Tìm theo tên...">
+                    <button type="submit" class="absolute right-2 top-2 text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </form>
+
+            <a asp-page="Login" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                Thay đổi Credentials 
+            </a>
+
+            <a asp-page="Create" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Thêm liên hệ
+            </a>
+        </div>
+    </div>
+
+    @if (!Model.Contacts.Any())
+    {
+        <div class="text-center py-10">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900">Danh sách trống</h3>
+            <p class="mt-1 text-sm text-gray-500">Vui lòng thêm các liên hệ vào danh sách.</p>
+            <div class="mt-6">
+                <a asp-page="Create" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Thêm liên hệ
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Thông tin</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Địa chỉ</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Ngân hàng</th> 
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach (var contact in Model.Contacts)
+                    {
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">@contact.NAME</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                                @if (contact.PHONE != null && contact.PHONE.Any())
+                                {        
+                                    <div>
+                                        <div class="font-semibold text-gray-700 mb-1">SĐT:</div>
+                                            <ul class="list-disc list-inside text-gray-900">
+                                                @foreach (var phone in contact.PHONE)
+                                                {
+                                                    <li>@phone.VALUE</li>
+                                                }
+                                            </ul>   
+                                    </div>
+                                }
+
+                                @if (contact.EMAIL != null && contact.EMAIL.Any())
+                                {
+                                    <div>
+                                        <div class="font-semibold text-gray-700 mb-1">Email:</div>
+                                        <ul class="list-disc list-inside text-gray-900">
+                                            @foreach (var email in contact.EMAIL)
+                                            {
+                                                <li>@email.VALUE</li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+
+                                @if (contact.WEB != null && contact.WEB.Any())
+                                {
+                                    <div>
+                                        <div class="font-semibold text-gray-700 mb-1">Website:</div>
+                                        <ul class="list-disc list-inside text-gray-900">
+                                            @foreach (var web in contact.WEB)
+                                            {
+                                                <li>
+                                                    @web.VALUE
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                            </td>
+                             <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                               @*  <div class="text-sm text-gray-900">@contact.CommuneWard, @contact.District</div>
+                                <div class="text-sm text-gray-500">@contact.ADDRESS_PROVINCE</div> *@
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                               @*  <div class="text-sm text-gray-900">@contact.BankName</div>
+                                <div class="text-sm text-gray-500">@contact.BankAccountNumber</div> *@
+                            </td> 
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex justify-end space-x-2">
+                                    <a asp-page="./Edit" asp-route-id="@contact.Id" class="text-blue-600 hover:text-blue-900">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </a>
+                                    <a asp-page="./Delete" asp-route-id="@contact.Id" class="text-red-600 hover:text-red-900">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </a>
+                                    <button type="button" class="text-gray-600 hover:text-gray-900 md:hidden" onclick="toggleDetails(@contact.Id)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="details-@contact.Id" class="hidden md:hidden bg-gray-50">
+                            <td colspan="5" class="px-6 py-4">
+                                <div class="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <h4 class="text-xs font-medium text-gray-500 uppercase">Thông tin</h4>
+                                        @if (contact.PHONE != null && contact.PHONE.Any())
+                                        {        
+                                            <div>
+                                                <div class="text-xs font-medium text-gray-500 uppercase">SĐT:</div>
+                                                    <ul class="list-disc list-inside text-sm text-gray-900">
+                                                        @foreach (var phone in contact.PHONE)
+                                                        {
+                                                            <li>@phone.VALUE</li>
+                                                        }
+                                                    </ul>   
+                                            </div>
+                                        }
+                                        @if (contact.EMAIL != null && contact.EMAIL.Any())
+                                        {
+                                            <div>
+                                                <div class="text-xs font-medium text-gray-500 uppercase">Email:</div>
+                                                <ul class="list-disc list-inside text-sm text-gray-900">
+                                                    @foreach (var email in contact.EMAIL)
+                                                    {
+                                                        <li>@email.VALUE</li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                        @if (contact.WEB != null && contact.WEB.Any())
+                                        {
+                                            <div>
+                                                <div class="text-xs font-medium text-gray-500 uppercase">Website:</div>
+                                                <ul class="list-disc list-inside text-sm text-gray-900">
+                                                    @foreach (var web in contact.WEB)
+                                                    {
+                                                        <li>
+                                                            @web.VALUE
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xs font-medium text-gray-500 uppercase">Địa chỉ</h4>
+                                        @* <div class="text-sm text-gray-900">@contact.CommuneWard, @contact.District</div>
+                                        <div class="text-sm text-gray-900">@contact.ADDRESS_PROVINCE</div> *@
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xs font-medium text-gray-500 uppercase">Ngân hàng</h4>
+                                       @*  <div class="text-sm text-gray-900">@contact.BankName</div>
+                                        <div class="text-sm text-gray-900">@contact.BankAccountNumber</div> *@
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (Model.MaxPage > 1)
+{
+    <nav class="flex justify-center mt-6">
+        <ul class="inline-flex items-center -space-x-px text-sm">
+            @for (int i = 1; i <= Model.MaxPage; i++)
+            {
+                bool isCurrent = i == Model.Page;
+                <li>
+                    <a asp-page="./Index" asp-route-Page="@i" asp-route-SearchString="@Model.SearchString"
+                       class="px-4 py-2 border border-gray-300 @(isCurrent ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100") rounded-md mx-1 transition-colors duration-200">
+                        @i
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+}
+
+
+@if (TempData["ToastMessage"] != null)
+{
+    <div id="toast-container" class="fixed top-4 right-4 z-50">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg flex items-center" role="alert">
+            <svg class="fill-current w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M8.257 3.099c.366-.446.957-.446 1.323 0l6.518 7.95c.393.479.058 1.207-.661 1.207H2.4c-.719 0-1.054-.728-.661-1.207l6.518-7.95zM11 13a1 1 0 10-2 0 1 1 0 002 0zm-1 4a1 1 0 100-2 1 1 0 000 2z"/>
+            </svg>
+            <span>@TempData["ToastMessage"]</span>
+            <button class="ml-auto text-sm text-gray-500 hover:text-gray-700" onclick="this.parentElement.remove()">✖</button>
+        </div>
+    </div>
+
+    <script>
+        // Auto-hide toast after 4 seconds
+        setTimeout(() => {
+            const toast = document.getElementById('toast-container');
+            if (toast) toast.remove();
+        }, 4000);
+    </script>
+}
+
+
+@section Scripts {
+    <script>
+        function toggleDetails(id) {
+            const detailsRow = document.getElementById(`details-${id}`);
+            if (detailsRow.classList.contains('hidden')) {
+                detailsRow.classList.remove('hidden');
+            } else {
+                detailsRow.classList.add('hidden');
+            }
+        }
+    </script>
+}

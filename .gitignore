@@ -55,3 +55,4 @@ nunit-*.xml
 
 
 .vs/
+/Bitrix24API/db.json

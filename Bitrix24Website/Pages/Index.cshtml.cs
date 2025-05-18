@@ -1,0 +1,109 @@
+﻿using Bitrix24Website.Models;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Runtime.InteropServices.ObjectiveC;
+using System.Text;
+using System.Text.Json;
+using static System.Net.WebRequestMethods;
+
+namespace Bitrix24Website.Pages
+{
+    public class IndexModel : PageModel
+    {
+        [BindProperty(SupportsGet = true)]
+        public int MaxPage { get; set; } = 1;
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        public IndexModel(IHttpClientFactory httpClientFactory)
+        {
+            _httpClientFactory = httpClientFactory;
+        }
+
+        public IList<Contact> Contacts { get; set; } = new List<Contact>();
+
+        [BindProperty(SupportsGet = true)]
+        public string SearchString { get; set; }
+        [BindProperty(SupportsGet = true)]
+        public int Page { get; set; } = 1;
+
+        public async Task<IActionResult> OnGetAsync()
+        {
+            var clientId = HttpContext.Session.GetString("clientId");
+            var clientSecret = HttpContext.Session.GetString("clientSecret");
+
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+            {
+                return RedirectToPage("/Login");
+            }
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+
+                object payload = new
+                {
+                    SELECT = new string[] { "ID", "NAME", "BIRTHDATE", "ADDRESS", "EMAIL", "PHONE", "WEB" },
+                    START = (Page - 1) * 50
+                };
+                if (!string.IsNullOrWhiteSpace(SearchString))
+                {
+                    payload = new
+                    {
+                        SELECT = new string[] { "ID", "NAME", "BIRTHDATE", "ADDRESS", "EMAIL", "PHONE", "WEB" },
+                        FILTER = new Dictionary<string, object>
+                        {
+                            ["%NAME"] = SearchString
+                        },
+                        START = Page
+                    };
+                }
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.contact.list",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error : {responseMsg}");
+                    TempData["ToastMessage"] = $"Không thể tải do {response.ReasonPhrase}";
+                    return Page();
+                }
+                var responseString = await response.Content.ReadAsStringAsync();
+
+                using var doc = JsonDocument.Parse(responseString);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("result", out var resultElement) && resultElement.ValueKind == JsonValueKind.Array)
+                {
+                    Contacts = resultElement.Deserialize<List<Contact>>() ?? new List<Contact>();
+                }
+                int total = root.GetProperty("total").GetInt32();
+                MaxPage = total / 50;
+                if (total % 50 != 0) MaxPage++;
+
+            }
+            catch (HttpRequestException httpEx)
+            {
+                TempData["ToastMessage"] = $"Lỗi mạng: {httpEx.Message}";
+            }
+            catch (JsonException jsonEx)
+            {
+                TempData["ToastMessage"] = $"Định dạng JSON không đúng: {jsonEx.Message}";
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastMessage"] = $"Lỗi không xác định: {ex.Message}";
+            }
+
+            return Page();
+        }
+    }
+}

@@ -1,0 +1,65 @@
+﻿@* @model Bitrix24Website.Models.Contact
+
+<div class="space-y-6">
+    <div class="grid grid-cols-1 gap-6">
+        <div>
+            <label asp-for="NAME" class="block text-sm font-medium text-gray-700">Full Name</label>
+            <input asp-for="NAME" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+            <span asp-validation-for="NAME" class="text-red-500 text-xs"></span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label asp-for="CommuneWard" class="block text-sm font-medium text-gray-700">Commune/Ward</label>
+                <input asp-for="CommuneWard" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+                <span asp-validation-for="CommuneWard" class="text-red-500 text-xs"></span>
+            </div>
+
+            <div>
+                <label asp-for="District" class="block text-sm font-medium text-gray-700">District</label>
+                <input asp-for="District" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+                <span asp-validation-for="District" class="text-red-500 text-xs"></span>
+            </div>
+
+            <div>
+                <label asp-for="ADDRESS_PROVINCE" class="block text-sm font-medium text-gray-700">Province/City</label>
+                <input asp-for="ADDRESS_PROVINCE" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+                <span asp-validation-for="ADDRESS_PROVINCE" class="text-red-500 text-xs"></span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label asp-for="PhoneNumber" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                <input asp-for="PhoneNumber" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+                <span asp-validation-for="PhoneNumber" class="text-red-500 text-xs"></span>
+            </div>
+
+            <div>
+                <label asp-for="Email" class="block text-sm font-medium text-gray-700">Email</label>
+                <input asp-for="Email" type="email" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+                <span asp-validation-for="Email" class="text-red-500 text-xs"></span>
+            </div>
+        </div>
+
+        <div>
+            <label asp-for="Website" class="block text-sm font-medium text-gray-700">Website</label>
+            <input asp-for="Website" type="url" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+            <span asp-validation-for="Website" class="text-red-500 text-xs"></span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label asp-for="BankName" class="block text-sm font-medium text-gray-700">Bank Name</label>
+                <input asp-for="BankName" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+                <span asp-validation-for="BankName" class="text-red-500 text-xs"></span>
+            </div>
+
+            <div>
+                <label asp-for="BankAccountNumber" class="block text-sm font-medium text-gray-700">Bank Account Number</label>
+                <input asp-for="BankAccountNumber" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+                <span asp-validation-for="BankAccountNumber" class="text-red-500 text-xs"></span>
+            </div>
+        </div>
+    </div>
+</div> *@
