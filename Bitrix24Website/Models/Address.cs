@@ -2,6 +2,7 @@
 {
     public class Address
     {
+        public string ENTITY_ID { get; set; }
         public string ADDRESS_1 { get; set; }
         public string ADDRESS_2 { get; set; }
         public string CITY { get; set; }

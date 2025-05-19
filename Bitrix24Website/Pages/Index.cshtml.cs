@@ -73,10 +73,18 @@ namespace Bitrix24Website.Pages
                 if (!response.IsSuccessStatusCode)
                 {
                     var responseMsg = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Error : {responseMsg}");
-                    TempData["ToastMessage"] = $"Không thể tải do {response.ReasonPhrase}";
+                    Console.WriteLine($"Error in index: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        TempData["ToastMessage"] = $"Token đã hết hạn, vui lòng thay đổi credentials";
+                    }
+                    else
+                    { 
+                        TempData["ToastMessage"] = $"Không thể tải do {response.ReasonPhrase}";
+                    }
                     return Page();
                 }
+
                 var responseString = await response.Content.ReadAsStringAsync();
 
                 using var doc = JsonDocument.Parse(responseString);
@@ -97,10 +105,11 @@ namespace Bitrix24Website.Pages
             catch (JsonException jsonEx)
             {
                 TempData["ToastMessage"] = $"Định dạng JSON không đúng: {jsonEx.Message}";
+                Console.WriteLine("Error in index: " + jsonEx.Message);
             }
             catch (Exception ex)
             {
-                TempData["ToastMessage"] = $"Lỗi không xác định: {ex.Message}";
+                TempData["ToastMessage"] = $"Lỗi: {ex.Message}";
             }
 
             return Page();

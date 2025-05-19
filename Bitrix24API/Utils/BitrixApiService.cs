@@ -56,6 +56,9 @@ namespace Bitrix24API.Utils
                 ClientEndpoint = obj.GetProperty("client_endpoint").GetString()
             };
 
+            ManageItem.SaveToFile(newToken);
+
+
             return newToken;
         }
     }

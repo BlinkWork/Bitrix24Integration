@@ -4,7 +4,7 @@ namespace Bitrix24Website.Models
 {
     public class Contact
     {
-        public int Id { get; set; }
+        public string ID { get; set; }
         public string NAME { get; set; }
         public List<ContactField> PHONE { get; set; }
         public List<ContactField> EMAIL { get; set; }

@@ -6,8 +6,6 @@ namespace Bitrix24API.Models
     {
         [FromForm(Name = "auth[access_token]")]
         public string AccessToken { get; set; }
-        [FromForm(Name = "auth[application_token]")]
-        public string ApplicationToken { get; set; }
         [FromForm(Name = "auth[expires]")]
         public long Expires { get; set; }
         [FromForm(Name = "auth[expires_in]")]

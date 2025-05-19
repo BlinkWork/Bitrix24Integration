@@ -5,7 +5,7 @@ VisualStudioVersion = 17.11.35219.272
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bitrix24API", "Bitrix24API\Bitrix24API.csproj", "{5778BD0D-685E-4257-BE78-78ABF36CA9FC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bitrix24Website", "Bitrix24Website\Bitrix24Website.csproj", "{32AF3D12-BA13-4652-8262-3A2864FDD68A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bitrix24Website", "Bitrix24Website\Bitrix24Website.csproj", "{32AF3D12-BA13-4652-8262-3A2864FDD68A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

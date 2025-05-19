@@ -1,0 +1,257 @@
+﻿@page "{id:int}"
+@model DetailModel
+@{
+    ViewData["Title"] = "Thông tin liên hệ";
+}
+
+<div class="bg-white p-6 rounded shadow">
+    <div class="mt-6 flex justify-between items-center">
+        <div>
+            <a asp-page="Index" class="px-4 py-2 text-gray-600 hover:underline">Quay lại</a>
+        </div>
+        @if (Model.RequisiteId != -2)
+        {
+            <div class="flex space-x-2">
+                <a asp-page="Edit" asp-route-id="@Model.Contact.ID" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Chỉnh sửa cơ bản</a>
+                <form method="post" asp-page-handler="Delete" asp-route-id="@Model.Contact.ID" onsubmit="return confirm('Bạn chắc chứ?');">
+                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Xóa</button>
+                </form>
+            </div>
+        }
+    </div>
+    <h2 class="text-2xl font-semibold text-gray-800 mb-4">@Model.Contact.NAME</h2>
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div><dt class="font-medium text-gray-700">ID</dt><dd>@Model.Contact.ID</dd></div>
+        @if (Model.RequisiteId != -2)
+        {
+            <div><dt class="font-medium text-gray-700">Tạo lúc</dt><dd>@Model.Contact.DATE_CREATE</dd></div>
+        }
+    </dl>
+
+    <h3 class="mt-6 text-lg font-medium text-gray-700">Số điện thoại</h3>
+    <ul class="list-disc ml-5">
+        @if (Model.Contact.PHONE != null)
+        {
+            foreach (var ph in Model.Contact.PHONE)
+            {
+                <li>@ph.VALUE_TYPE: @ph.VALUE</li>
+            }
+        }
+        else
+        {
+            <p>Không có</p>
+        }
+    </ul>
+
+    <h3 class="mt-4 text-lg font-medium text-gray-700">Emails</h3>
+    <ul class="list-disc ml-5">
+        @if (Model.Contact.EMAIL != null)
+        {
+            foreach (var em in Model.Contact.EMAIL)
+            {
+                <li>@em.VALUE_TYPE: @em.VALUE</li>
+            }
+        }
+        else
+        {
+            <p>Không có</p>
+        }
+    </ul>
+
+    <h3 class="mt-4 text-lg font-medium text-gray-700">Websites</h3>
+    <ul class="list-disc ml-5">
+        @if (Model.Contact.EMAIL != null)
+        {
+            foreach (var w in Model.Contact.WEB)
+            {
+                <li>@w.VALUE_TYPE: <a href="@w.VALUE" target="_blank" class="text-blue-600 hover:underline">@w.VALUE</a></li>
+            }
+        }
+        else
+        {
+            <p>Không có</p>
+        }
+    </ul>
+
+    <div class="mt-8">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">Địa chỉ</h3>
+            <div class="space-x-2">
+                <button @(Model.RequisiteId == -2 ? "hidden" : "") id="add-address" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Tạo mới</button>
+                <button @(Model.RequisiteId == -2 ? "hidden" : "") id="delete-all-address" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Xóa tất cả</button>
+            </div>
+        </div>
+        <ul id="address-list" class="space-y-2"></ul>
+        <div id="address-pagination" class="mt-4 flex justify-center space-x-2"></div>
+    </div>
+
+    <div class="mt-8">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">Ngân hàng</h3>
+            <div class="space-x-2">
+                <button @(Model.RequisiteId == -2 ? "hidden" : "") id="add-bank" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Tạo mới</button>
+                <button @(Model.RequisiteId == -2 ? "hidden" : "") id="delete-all-bank" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Xóa tất cả</button>
+            </div>
+        </div>
+        <ul id="bank-list" class="space-y-2"></ul>
+        <div id="bank-pagination" class="mt-4 flex justify-center space-x-2"></div>
+    </div>
+</div>
+
+@if (TempData["ToastMessage"] != null)
+{
+    <div id="toast-container" class="fixed top-4 right-4 z-50">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg flex items-center" role="alert">
+            <svg class="fill-current w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M8.257 3.099c.366-.446.957-.446 1.323 0l6.518 7.95c.393.479.058 1.207-.661 1.207H2.4c-.719 0-1.054-.728-.661-1.207l6.518-7.95zM11 13a1 1 0 10-2 0 1 1 0 002 0zm-1 4a1 1 0 100-2 1 1 0 000 2z" />
+            </svg>
+            <span>@TempData["ToastMessage"]</span>
+            <button class="ml-auto text-sm text-gray-500 hover:text-gray-700" onclick="this.parentElement.remove()">✖</button>
+        </div>
+    </div>
+
+    <script>
+        setTimeout(() => {
+            const toast = document.getElementById('toast-container');
+            if (toast) toast.remove();
+        }, 4000);
+    </script>
+}
+
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const contactId   = @(Model.Contact.ID == null ? -1 : Model.Contact.ID);
+            const requisiteId = @Model.RequisiteId;
+
+            let addressPage = 1;
+            let bankPage = 1;
+
+            function renderPagination(containerId, total, currentPage, onPageClick) {
+                const totalPages = Math.ceil(total / 50);
+                const container = $(containerId);
+                container.empty();
+
+                for (let i = 1; i <= totalPages; i++) {
+                    const btn = $(`<button class="px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-500 text-white' : 'bg-white text-gray-800 hover:bg-gray-200'}">${i}</button>`);
+                    btn.click(() => onPageClick(i));
+                    container.append(btn);
+                }
+            }
+
+            function fetchAddress(page = 1) {
+                if (requisiteId === -2) return;
+                if (requisiteId === -1) {
+                    const container = $('#address-list');
+                    container.empty();
+                    container.append('<li class="text-gray-500">Không có địa chỉ.</li>');
+                    $("#delete-all-address").hide();
+                    return;
+                }
+                $.get(`/Detail/${contactId}?handler=Address&requisiteId=${requisiteId}&pageIndex=${page}`, function (data) {
+                    const container = $('#address-list');
+                    container.empty();
+                    if (!data.success) {
+                        container.append('<li class="text-red-500">Không thể tải dữ liệu địa chỉ.</li>');
+                        $("#delete-all-address").hide();
+                        return;
+                    }
+                    if (data.data?.length === 0) {
+                        container.append('<li class="text-gray-500">Không có địa chỉ.</li>');
+                        $("#delete-all-address").hide();
+                    } else {
+                        $("#delete-all-address").show();
+                    }
+
+                    data.data.forEach(item => {
+                        container.append(`
+                            <li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium">${item.address1 ?? ''} ${item.city ?? ''}</p>
+                                    <p class="text-sm text-gray-600">${item.region ?? ''}, ${item.country ?? ''}</p>
+                                </div>
+                                <div class="space-x-2">
+                                    <button class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
+                                    <button class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                                </div>
+                            </li>
+                        `);
+                    });
+
+                    renderPagination('#address-pagination', data.total, page, (newPage) => {
+                        addressPage = newPage;
+                        fetchAddress(addressPage);
+                    });
+                });
+            }
+
+            function fetchBank(page = 1) {
+                if (requisiteId === -2) return;
+                if (requisiteId === -1) {
+                    const container = $('#bank-list');
+                    container.empty();
+                    container.append('<li class="text-gray-500">Không có thông tin ngân hàng.</li>');
+                    $("#delete-all-bank").hide();
+                }
+                $.get(`/Detail/${contactId}?handler=Bank&requisiteId=${requisiteId}&pageIndex=${page}`, function (data) {
+                    const container = $('#bank-list');
+                    container.empty();
+                    if (!data.success) {
+                        container.append('<li class="text-red-500">Không thể tải dữ liệu địa chỉ.</li>');
+                        $("#delete-all-bank").hide();
+                        return;
+                    }
+                    if (data.data?.length === 0) {
+                        container.append('<li class="text-gray-500">Không có thông tin ngân hàng.</li>');
+                        $("#delete-all-bank").hide();
+                    } else {
+                        $("#delete-all-bank").show();
+                    }
+
+                    data.data.forEach(item => {
+                        container.append(`
+                            <li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium">${item.name ?? ''}</p>
+                                    <p class="text-sm text-gray-600">Số tài khoản: ${item.rQ_ACC_NUM ?? ''}</p>
+                                </div>
+                                <div class="space-x-2">
+                                    <button class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
+                                    <button class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                                </div>
+                            </li>
+                        `);
+                    });
+
+                    renderPagination('#bank-pagination', data.total, page, (newPage) => {
+                        bankPage = newPage;
+                        fetchBank(bankPage);
+                    });
+                });
+            }
+
+            fetchAddress();
+            fetchBank();
+
+            if (requisiteId != -2) {
+                $('#add-address').click(() => alert('Tính năng "Tạo mới địa chỉ" chưa được triển khai.'));
+                $('#delete-all-address').click(() => {
+                    if (requisiteId = -1) return;
+                    if (confirm('Bạn có chắc muốn xóa tất cả địa chỉ không?')) {
+                        alert('Tính năng "Xóa tất cả địa chỉ" chưa được triển khai.');
+                    }
+                });
+
+                $('#add-bank').click(() => alert('Tính năng "Tạo mới ngân hàng" chưa được triển khai.'));
+                $('#delete-all-bank').click(() => {
+                    if (requisiteId = -1) return;
+                    if (confirm('Bạn có chắc muốn xóa tất cả ngân hàng không?')) {
+                        alert('Tính năng "Xóa tất cả ngân hàng" chưa được triển khai.');
+                    }
+                });
+            }
+
+        });
+    </script>
+}

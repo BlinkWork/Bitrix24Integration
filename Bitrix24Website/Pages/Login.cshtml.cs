@@ -26,7 +26,6 @@ namespace Bitrix24Website.Pages
                 return Page();
             }
 
-            // Save to session
             HttpContext.Session.SetString("clientId", ClientId);
             HttpContext.Session.SetString("clientSecret", ClientSecret);
 

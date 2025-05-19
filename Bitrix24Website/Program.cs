@@ -10,6 +10,16 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins",
+            builder =>
+            {
+                builder.AllowAnyOrigin()
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+            });
+});
 
 
 var app = builder.Build();
@@ -27,6 +37,7 @@ app.UseStaticFiles();
 
 app.UseSession();
 app.UseRouting();
+app.UseCors("AllowAllOrigins");
 
 app.UseAuthorization();
 

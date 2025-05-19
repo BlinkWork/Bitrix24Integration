@@ -2,5 +2,9 @@
 {
     public class Bank
     {
+        public int ENTITY_ID { get; set; }
+        public string NAME { get; set; }
+        public string ACTIVE { get; set; }
+        public string RQ_ACC_NUM { get; set; }
     }
 }
