@@ -1,5 +1,6 @@
 ﻿@page "{id:int}"
 @model DetailModel
+@using System.Text.Json;
 @{
     ViewData["Title"] = "Thông tin liên hệ";
 }
@@ -19,6 +20,7 @@
             </div>
         }
     </div>
+    @Html.AntiForgeryToken()
     <h2 class="text-2xl font-semibold text-gray-800 mb-4">@Model.Contact.NAME</h2>
     <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><dt class="font-medium text-gray-700">ID</dt><dd>@Model.Contact.ID</dd></div>
@@ -64,7 +66,7 @@
         {
             foreach (var w in Model.Contact.WEB)
             {
-                <li>@w.VALUE_TYPE: <a href="@w.VALUE" target="_blank" class="text-blue-600 hover:underline">@w.VALUE</a></li>
+                <li>@w.VALUE_TYPE: <a href="@("https://" + w.VALUE)" target="_blank" class="text-blue-600 hover:underline">@w.VALUE</a></li>
             }
         }
         else
@@ -73,12 +75,42 @@
         }
     </ul>
 
+    <div class="flex flex-wrap justify-between items-end w-full">
+        @if (Model.Requisites != null && Model.Requisites.Any())
+        {
+            <div class="mt-6 mb-4 w-full sm:w-auto sm:mb-0">
+                <label for="requisite-select" class="block text-gray-700 font-medium mb-1">Chọn hồ sơ:</label>
+                <select id="requisite-select" class="w-full sm:w-64 px-4 py-2 border rounded-lg shadow-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    @foreach (var req in Model.Requisites)
+                    {
+                        int selectedId = -1;
+                        int.TryParse(req.ID, out selectedId);
+                        if (Model.RequisiteId == selectedId)
+                        {
+                            <option value="@req.ID" selected>@req.NAME</option>
+                        }
+                        else
+                        {
+                            <option value="@req.ID">@req.NAME</option>
+                        }
+                    }
+                </select>
+            </div>
+        }
+
+        <div class="flex space-x-2 mt-6 ml-auto">
+            <button type="button" id="create-profile" class="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">Tạo hồ sơ</button>
+            <button type="button" id="edit-profile" class="focus:outline-none text-white bg-yellow-700 hover:bg-yellow-800 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-yellow-600 dark:hover:bg-yellow-700 dark:focus:ring-yellow-900">Sửa hồ sơ</button>
+            <button type="button" id="delete-profile" class="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">Xóa hồ sơ</button>
+        </div>
+    </div>
+
+
     <div class="mt-8">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-semibold text-gray-800">Địa chỉ</h3>
             <div class="space-x-2">
-                <button @(Model.RequisiteId == -2 ? "hidden" : "") id="add-address" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Tạo mới</button>
-                <button @(Model.RequisiteId == -2 ? "hidden" : "") id="delete-all-address" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Xóa tất cả</button>
+                <button @((Model.RequisiteId == -2 || Model.Requisites.Count == 0) ? "hidden" : "") id="add-address" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Tạo mới</button>
             </div>
         </div>
         <ul id="address-list" class="space-y-2"></ul>
@@ -89,14 +121,97 @@
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-semibold text-gray-800">Ngân hàng</h3>
             <div class="space-x-2">
-                <button @(Model.RequisiteId == -2 ? "hidden" : "") id="add-bank" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Tạo mới</button>
-                <button @(Model.RequisiteId == -2 ? "hidden" : "") id="delete-all-bank" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Xóa tất cả</button>
+                <button @((Model.RequisiteId == -2 || Model.Requisites.Count == 0) ? "hidden" : "") id="add-bank" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Tạo mới</button>
             </div>
         </div>
         <ul id="bank-list" class="space-y-2"></ul>
         <div id="bank-pagination" class="mt-4 flex justify-center space-x-2"></div>
     </div>
 </div>
+<div id="bankModal" class="modal hidden fixed inset-0 bg-gray-900/75 flex justify-center items-center z-50 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6 md:p-8">
+        <h2 id="bankModalTitle" class="text-xl font-semibold text-gray-900 mb-5">Tạo/Sửa Tài Khoản Ngân Hàng</h2>
+
+        <form id="bankForm" class="space-y-4">
+            <input type="hidden" name="ENTITY_ID" id="bankEntityId" />
+
+            <div>
+                <label for="bankName" class="block text-sm font-medium text-gray-700">Tên Ngân Hàng</label>
+                <input type="text" name="NAME" id="bankName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required />
+            </div>
+
+            <div>
+                <label for="bankAccount" class="block text-sm font-medium text-gray-700">Số tài khoản</label>
+                <input type="text" name="RQ_ACC_NUM" id="bankAccount" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required />
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" class="modal-close px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1">Hủy</button>
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="addressModal" class="modal hidden fixed inset-0 bg-gray-900/75 flex justify-center items-center z-50 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 md:p-8">
+        <h2 id="addressModalTitle" class="text-xl font-semibold text-gray-900 mb-5">Tạo/Sửa Địa Chỉ</h2>
+
+        <form id="addressForm" class="space-y-4">
+            <input type="hidden" name="ENTITY_ID" id="addressEntityId" />
+            <input type="hidden" name="ENTITY_TYPE_ID" id="addressEntityTypeId" />
+
+            <div>
+                <label for="city" class="block text-sm font-medium text-gray-700">Phường/Xã</label>
+                <input type="text" name="CITY" id="city" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
+
+            <div>
+                <label for="province" class="block text-sm font-medium text-gray-700">Quận/Huyện</label>
+                <input type="text" name="PROVINCE" id="province" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
+
+            <div>
+                <label for="region" class="block text-sm font-medium text-gray-700">Tỉnh/Thành phố</label>
+                <input type="text" name="REGION" id="region" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
+
+            <div>
+                <label for="country" class="block text-sm font-medium text-gray-700">Quốc gia</label>
+                <input type="text" name="COUNTRY" id="country" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
+
+            <div>
+                <label for="addressType" class="block text-sm font-medium text-gray-700">Loại</label>
+                <select id="addressType" class="mt-1 block w-full sm:w-64 border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-white text-gray-800 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" class="modal-close px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1">Hủy</button>
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="profileModal" class="modal hidden fixed inset-0 bg-gray-900/75 flex justify-center items-center z-50 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 md:p-8">
+        <h2 id="profileModalTitle" class="text-xl font-semibold text-gray-900 mb-5">Tạo/Sửa Hồ Sơ</h2>
+
+        <form id="profileForm" class="space-y-4">
+            <div>
+                <label for="profileName" class="block text-sm font-medium text-gray-700">Tên</label>
+                <input type="text" name="profileName" id="profileName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" class="modal-close px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1">Hủy</button>
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 
 @if (TempData["ToastMessage"] != null)
 {
@@ -117,16 +232,118 @@
         }, 4000);
     </script>
 }
-
+<div id="toastContainer" class="fixed top-4 right-4 space-y-2 z-[9999]"></div>
 
 @section Scripts {
     <script>
         $(document).ready(function () {
-            const contactId   = @(Model.Contact.ID == null ? -1 : Model.Contact.ID);
-            const requisiteId = @Model.RequisiteId;
-
-            let addressPage = 1;
+            let contactId = @(Model.Contact.ID == null ? -1 : Model.Contact.ID);
+            let requisiteId = @Model.RequisiteId;
+            let requisiteName = '';
             let bankPage = 1;
+            let addressFormMode = 'create';
+            let bankFormMode = 'create';
+            let profileFormMode = 'create';
+
+            var addressTypes = @Html.Raw(JsonSerializer.Serialize(Model.AddressTypes));
+            var profiles = @Html.Raw(JsonSerializer.Serialize(Model.Requisites));
+            var addressTypeRemains = addressTypes;
+
+            if (requisiteId == -2) {
+                $("#create-profile").hide();
+            }
+            if (requisiteId <= 0) {
+                $("#delete-profile").hide();
+            }
+
+            function openCreateProfileModal() {
+                profileFormMode = 'create';
+                $('#profileName').val('');
+                $('#profileModal').removeClass('hidden');
+                $('#profileModalTitle').text('Tạo hồ sơ');
+            }
+
+            function openEditProfileModal() {
+                const d = {
+                    entityId: $(this).data('entity-id'),
+                }
+                $('#profileName').val('');
+                $('#profileModal').removeClass('hidden');
+                $('#profileModalTitle').text('Sửa hồ sơ');
+            }
+
+            function openCreateAddressModal() {
+                $('#addressModalTitle').text('Tạo Địa Chỉ');
+                $('#addressForm')[0].reset();
+                populateAddressType();
+                addressFormMode = 'create';
+                $('#addressModal').removeClass('hidden');
+            }
+            function openEditAddressModal() {
+                const d = {
+                    entityId: $(this).data('entity-id'),
+                    entityTypeId: $(this).data('entity-type-id'),
+                    typeId: $(this).data('type-id'),
+                    city: $(this).data('city'),
+                    region: $(this).data('region'),
+                    province: $(this).data('province'),
+                    country: $(this).data('country')
+                };
+                addressFormMode = 'edit';
+                $('#addressModalTitle').text('Chỉnh sửa Địa Chỉ');
+                $('#addressEntityId').val(d.entityId);
+                $('#addressTypeId').val(d.typeId);
+                $('#addressEntityTypeId').val(d.entityTypeId);
+                $('#city').val(d.city);
+                $('#region').val(d.region);
+                $('#province').val(d.province);
+                $('#country').val(d.country);
+                populateAddressType(d.typeId);
+                $('#addressModal').removeClass('hidden');
+            }
+            function openCreateBankModal() {
+                bankFormMode = 'create';
+                $('#bankModalTitle').text('Tạo Tài Khoản Ngân Hàng');
+                $('#bankForm')[0].reset();
+                $('#bankModal').removeClass('hidden');
+            }
+            function openEditBankModal() {
+                bankFormMode = 'edit';
+                const d = {
+                    id: $(this).data('id'),
+                    bankAccount: $(this).data('rq-acc-num'),
+                    name: $(this).data('name')
+                };
+                $('#bankModalTitle').text('Chỉnh sửa Tài Khoản Ngân Hàng');
+                $('#bankEntityId').val(d.id);
+                $('#bankName').val(d.name);
+                $('#bankAccount').val(d.bankAccount);
+                $('#bankModal').removeClass('hidden');
+            }
+
+            function populateAddressType(selected = '') {
+                const $sel = $('#addressType').empty();
+                if (selected != '') {
+                    const addressType = addressTypes.find(type => Number(type.ID) === Number(selected));
+                    const defaultOption = $('<option>').val(addressType.ID).text(addressType.NAME);
+                    $sel.append(defaultOption);
+                }
+                addressTypeRemains.forEach(t => {
+                    const opt = $('<option>').val(t.ID).text(t.NAME);
+                    $sel.append(opt);
+                });
+            }
+
+
+            $('#requisite-select').change(function () {
+                const newRequisiteId = $(this).val();
+                const newRequisiteName = $(this).find('option:selected').text();
+                requisiteName = newRequisiteName;
+                requisiteId = newRequisiteId;
+                bankPage = 1;
+                fetchAddress();
+                fetchBank();
+            });
 
             function renderPagination(containerId, total, currentPage, onPageClick) {
                 const totalPages = Math.ceil(total / 50);
@@ -140,88 +357,93 @@
                 }
             }
 
-            function fetchAddress(page = 1) {
+
+            function fetchAddress() {
                 if (requisiteId === -2) return;
                 if (requisiteId === -1) {
                     const container = $('#address-list');
                     container.empty();
                     container.append('<li class="text-gray-500">Không có địa chỉ.</li>');
-                    $("#delete-all-address").hide();
                     return;
                 }
-                $.get(`/Detail/${contactId}?handler=Address&requisiteId=${requisiteId}&pageIndex=${page}`, function (data) {
+                $.get(`/Detail/${contactId}?handler=Address&requisiteId=${requisiteId}`, function (data) {
                     const container = $('#address-list');
                     container.empty();
                     if (!data.success) {
                         container.append('<li class="text-red-500">Không thể tải dữ liệu địa chỉ.</li>');
-                        $("#delete-all-address").hide();
                         return;
                     }
                     if (data.data?.length === 0) {
                         container.append('<li class="text-gray-500">Không có địa chỉ.</li>');
-                        $("#delete-all-address").hide();
-                    } else {
-                        $("#delete-all-address").show();
                     }
 
+                    addressTypeRemains = addressTypes;
+                    const usedTypeIds = new Set();
                     data.data.forEach(item => {
+                        usedTypeIds.add(Number(item.typE_ID));
                         container.append(`
-                            <li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
-                                <div>
-                                    <p class="font-medium">${item.address1 ?? ''} ${item.city ?? ''}</p>
-                                    <p class="text-sm text-gray-600">${item.region ?? ''}, ${item.country ?? ''}</p>
-                                </div>
-                                <div class="space-x-2">
-                                    <button class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
-                                    <button class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
-                                </div>
-                            </li>
-                        `);
+                                            <li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
+                                                <div class="flex items-start gap-3">
+                                                    <p class="text-sm font-semibold text-blue-600 min-w-[100px]">
+                                                        ${(addressTypes.find(t => t.ID == item.typE_ID) || {}).NAME || 'Không xác định'}
+                                                    </p>
+                                                <div>
+                                                            <p class="font-medium">${item.province ?? ''} ${item.country ?? ''}</p>
+                                                    <p class="text-sm text-gray-600">${item.city ?? ''} ${item.region ?? ''}</p>
+                                                    </div>
+                                                </div>
+                                                <div class="space-x-2">
+                                                    <button
+                                                        data-entity-id="${item.entitY_ID}"
+                                                      data-city="${item.city}"
+                                                      data-region="${item.region}"
+                                                      data-province="${item.province}"
+                                                      data-country="${item.country}"
+                                                      data-entity-type-id="${item.entitY_TYPE_ID}"
+                                                      data-type-id="${item.typE_ID}"
+                                                      class="btn-edit-address bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
+                                                    <button data-type-id=${item.typE_ID}
+                                                    data-entity-type-id=${item.entitY_TYPE_ID}
+                                                    data-entity-id=${item.entitY_ID} class="btn-delete-address bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                                                </div>
+                                            </li>
+                                        `);
                     });
-
-                    renderPagination('#address-pagination', data.total, page, (newPage) => {
-                        addressPage = newPage;
-                        fetchAddress(addressPage);
-                    });
+                    addressTypeRemains = addressTypes.filter(type => !usedTypeIds.has(type.ID));
                 });
             }
 
-            function fetchBank(page = 1) {
+            function fetchBank() {
                 if (requisiteId === -2) return;
                 if (requisiteId === -1) {
                     const container = $('#bank-list');
                     container.empty();
                     container.append('<li class="text-gray-500">Không có thông tin ngân hàng.</li>');
-                    $("#delete-all-bank").hide();
                 }
-                $.get(`/Detail/${contactId}?handler=Bank&requisiteId=${requisiteId}&pageIndex=${page}`, function (data) {
+                $.get(`/Detail/${contactId}?handler=Bank&requisiteId=${requisiteId}&pageIndex=${bankPage}`, function (data) {
                     const container = $('#bank-list');
                     container.empty();
                     if (!data.success) {
                         container.append('<li class="text-red-500">Không thể tải dữ liệu địa chỉ.</li>');
-                        $("#delete-all-bank").hide();
                         return;
                     }
                     if (data.data?.length === 0) {
                         container.append('<li class="text-gray-500">Không có thông tin ngân hàng.</li>');
-                        $("#delete-all-bank").hide();
-                    } else {
-                        $("#delete-all-bank").show();
                     }
 
                     data.data.forEach(item => {
                         container.append(`
-                            <li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
-                                <div>
-                                    <p class="font-medium">${item.name ?? ''}</p>
-                                    <p class="text-sm text-gray-600">Số tài khoản: ${item.rQ_ACC_NUM ?? ''}</p>
-                                </div>
-                                <div class="space-x-2">
-                                    <button class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
-                                    <button class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
-                                </div>
-                            </li>
-                        `);
+                                            <li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
+                                                <div>
+                                                    <p class="font-medium">${item.name ?? ''}</p>
+                                                    <p class="text-sm text-gray-600">Số tài khoản: ${item.rQ_ACC_NUM ?? ''}</p>
+                                                </div>
+                                                <div class="space-x-2">
+                                                    <button data-id=${item.id} data-name=${item.name} data-rq-acc-num=${item.rQ_ACC_NUM} class="btn-edit-bank bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
+                                                    <button data-id=${item.id} class="btn-delete-bank bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                                                </div>
+                                            </li>
+                                        `);
                     });
 
                     renderPagination('#bank-pagination', data.total, page, (newPage) => {
@@ -231,27 +453,203 @@
                 });
             }
 
-            fetchAddress();
+            $('#addressForm').on('submit', function (e) {
+                e.preventDefault();
+                const handlerName = addressFormMode === 'create' ? 'CreateAddress' : 'EditAddress';
+                $.ajax({
+                    url: `?handler=${handlerName}`,
+                    type: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    data: JSON.stringify({
+                        Type_id: $('#addressType').val(),
+                        Entity_type_id: 8,
+                        Entity_id: requisiteId,
+                        City: $('#city').val(),
+                        Region: $('#region').val(),
+                        Province: $('#province').val(),
+                        Country: $('#country').val()
+                    }),
+                    success: function (res) {
+                        if (res.success) {
+                            $('#addressModal').addClass('hidden');
+                            showToast('Địa chỉ đã được lưu thành công!', 'success');
+                            fetchAddress();
+                        } else {
+                            showToast(res.message || 'Đã xảy ra lỗi khi lưu địa chỉ.', 'error');
+                        }
+                    },
+                    error: function (err) {
+                        console.error(err);
+                        showToast('Có lỗi xảy ra khi lưu địa chỉ.', 'error');
+                    }
+                });
+            });
+
+            $('#bankForm').on('submit', function (e) {
+                e.preventDefault();
+                const handlerName = addressFormMode === 'create' ? 'CreateBank' : 'EditBank';
+
+                const obj = (addressFormMode === 'create' ? {
+                    Entity_id: requisiteId,
+                    Name: $("#bankName").val(),
+                    Rq_acc_num: $("#bankAccount").val(),
+                } : {
+                    Id: $("#bankEntityId").val(),
+                    Name: $("#bankName").val(),
+                    Rq_acc_num: $("#bankAccount").val(),
+                });
+
+                $.ajax({
+                    url: `?handler=${handlerName}`,
+                    type: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    data: JSON.stringify(obj),
+                    success: function (res) {
+                        if (res.success) {
+                            $('#bankModal').addClass('hidden');
+                            showToast('Ngân hàng đã được lưu thành công!', 'success');
+                            fetchBank();
+                        } else {
+                            showToast(res.message || 'Đã xảy ra lỗi khi lưu ngân hàng.', 'error');
+                        }
+                    },
+                    error: function (err) {
+                        console.error(err);
+                        showToast('Có lỗi xảy ra khi lưu ngân hàng.', 'error');
+                    }
+                });
+
+            });
+
+
             fetchBank();
+            fetchAddress();
 
-            if (requisiteId != -2) {
-                $('#add-address').click(() => alert('Tính năng "Tạo mới địa chỉ" chưa được triển khai.'));
-                $('#delete-all-address').click(() => {
-                    if (requisiteId = -1) return;
-                    if (confirm('Bạn có chắc muốn xóa tất cả địa chỉ không?')) {
-                        alert('Tính năng "Xóa tất cả địa chỉ" chưa được triển khai.');
-                    }
+            $('#btn-open-create-bank').on('click', function () {
+                $('#createBankModal').removeClass('hidden');
+            });
+
+            $(document)
+                .on('click', '#add-address', openCreateAddressModal)
+                .on('click', '.btn-edit-address', openEditAddressModal)
+                .on('click', '#create-profile', openCreateProfileModal)
+                .on('click', '.btn-delete-address', deleteAddress)
+
+                .on('click', '#add-bank', openCreateBankModal)
+                .on('click', '.btn-edit-bank', openEditBankModal)
+                .on('click', '.btn-delete-bank', deleteBank)
+
+                .on('click', '.modal-close', function () {
+                    $(this).closest('.modal').addClass('hidden');
                 });
 
-                $('#add-bank').click(() => alert('Tính năng "Tạo mới ngân hàng" chưa được triển khai.'));
-                $('#delete-all-bank').click(() => {
-                    if (requisiteId = -1) return;
-                    if (confirm('Bạn có chắc muốn xóa tất cả ngân hàng không?')) {
-                        alert('Tính năng "Xóa tất cả ngân hàng" chưa được triển khai.');
-                    }
-                });
+            function deleteAddress() {
+                const typeId = $(this).data('type-id');
+                const entityTypeId = $(this).data('entity-type-id');
+                const entityId = $(this).data('entity-id');
+
+                if (confirm('Bạn chắc chắn xóa chứ?')) {
+                    $.ajax({
+                        url: `?handler=Address`,
+                        type: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        data: JSON.stringify({
+                            Type_id: typeId,
+                            Entity_type_id: entityTypeId,
+                            Entity_id: entityId,
+                        }),
+                        success: function (res) {
+                            if (res.success) {
+                                $('#addressModal').addClass('hidden');
+                                showToast('Xóa địa chỉ thành công!', 'success');
+                                fetchAddress();
+                            } else {
+                                showToast(res.message || 'Đã xảy ra lỗi khi xóa địa chỉ.', 'error');
+                            }
+                        },
+                        error: function (err) {
+                            console.error(err);
+                            showToast('Có lỗi xảy ra khi xóa địa chỉ.', 'error');
+                        }
+                    });
+                }
+            }
+
+            function deleteBank() {
+                const id = $(this).data('id');
+                if (confirm('Bạn chắc chắn xóa chứ?')) {
+                    $.ajax({
+                        url: `?handler=Bank`,
+                        type: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        data: JSON.stringify(id),
+                        success: function (res) {
+                            if (res.success) {
+                                $('#addressModal').addClass('hidden');
+                                showToast('Xóa tài khoản ngân hàng thành công!', 'success');
+                                fetchBank();
+                            } else {
+                                showToast(res.message || 'Đã xảy ra lỗi khi xóa tài khoản ngân hàng.', 'error');
+                            }
+                        },
+                        error: function (err) {
+                            console.error(err);
+                            showToast('Có lỗi xảy ra khi xóa tài khoản ngân hàng.', 'error');
+                        }
+                    });
+                }
+            }
+
+            $("#delete-profile").click(() => {
+
+            }); 
+            $("#edit-profile").click(() => {
+
+            }); 
+            $("#create-profile").click(() => {
+
+            });
+
+            function refreshRequisiteSelect() {
+                const $sel = $('#addressType').empty();
+                // if (requisiteId > 0) {
+                //     const profile = profiles.find(type => Number(type.ID) === Number(selected));
+                //     const defaultOption = $('<option>').val(addressType.ID).text(addressType.NAME);
+                //     $sel.append(defaultOption);
+                // }
+                // profiles.forEach(t => {
+                //     const opt = $('<option>').val(t.ID).text(t.NAME);
+                //     $sel.append(opt);
+                // });
+            }
+
+            function showToast(message, type = 'success') {
+                const toast = $(`
+                                <div class="px-4 py-2 rounded shadow text-white animate-fade-in-down ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}">
+                                    ${message}
+                                </div>
+                            `);
+
+                $('#toastContainer').append(toast);
+
+                setTimeout(() => {
+                    toast.fadeOut(500, () => toast.remove());
+                }, 3000);
             }
 
         });
+
     </script>
 }

@@ -1,6 +1,7 @@
 ﻿using Bitrix24Website.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using static System.Net.WebRequestMethods;
@@ -18,6 +19,7 @@ namespace Bitrix24Website.Pages
         public int RequisiteId;
         public Contact Contact { get; set; } = new Contact();
         public List<Requisite> Requisites { get; set; } = new List<Requisite>();
+        public List<AddressType> AddressTypes { get; set; } = new List<AddressType>();
         private (string? clientId, string? clientSecret) GetClientCredentials()
         {
             var clientId = HttpContext.Session.GetString("clientId");
@@ -80,6 +82,47 @@ namespace Bitrix24Website.Pages
                         Contact = resultElement.Deserialize<Contact>() ?? new Contact();
                     }
                 }
+                // Address Type
+                requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.enum.addresstype",
+                    Payload = payload
+                };
+
+                requestJson = JsonSerializer.Serialize(requestObject);
+                requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error get address type in detail: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        TempData["ToastMessage"] = $"Token đã hết hạn, vui lòng thay đổi credentials";
+                    }
+                    else
+                    {
+                        TempData["ToastMessage"] = $"Không thể tải do {response.ReasonPhrase}";
+                    }
+                    RequisiteId = -2;
+                    return Page();
+                }
+                else
+                {
+                    var responseString = await response.Content.ReadAsStringAsync();
+
+                    using var doc = JsonDocument.Parse(responseString);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("result", out var resultElement) && resultElement.ValueKind == JsonValueKind.Array)
+                    {
+                        AddressTypes = resultElement.Deserialize<List<AddressType>>() ?? new List<AddressType>();
+                    }
+                }
+
                 // Requisite
                 payload = new
                 {
@@ -87,7 +130,7 @@ namespace Bitrix24Website.Pages
                     {
                         ["=ENTITY_ID"] = int.Parse(id)
                     },
-                    SELECT = new string[] { "ID", "ENTITY_ID" },
+                    SELECT = new string[] { "ID", "ENTITY_ID", "NAME", "PRESET_ID" },
                 };
                 requestObject = new
                 {
@@ -128,7 +171,7 @@ namespace Bitrix24Website.Pages
                         Requisites = resultElement.Deserialize<List<Requisite>>() ?? new List<Requisite>();
                     }
 
-                    // Hard fix only one requisite per person
+                    // Get first requisite
                     RequisiteId = Requisites.Count != 0 ? int.Parse(Requisites.First().ID) : -1;
                 }
             }
@@ -151,7 +194,6 @@ namespace Bitrix24Website.Pages
 
             return Page();
         }
-
         public async Task<IActionResult> OnPostDelete(string id)
         {
             try
@@ -164,7 +206,7 @@ namespace Bitrix24Website.Pages
                 }
                 var client = _httpClientFactory.CreateClient();
                 int contactId = -1;
-                int.TryParse(clientId, out contactId);
+                int.TryParse(id, out contactId);
                 if (contactId == -1)
                 {
                     TempData["ToastMessage"] = $"Contact không đúng";
@@ -174,6 +216,7 @@ namespace Bitrix24Website.Pages
                 {
                     ID = contactId
                 };
+
 
                 var requestObject = new
                 {
@@ -201,14 +244,351 @@ namespace Bitrix24Website.Pages
             {
                 TempData["ToastMessage"] = $"Đã có lỗi xảy ra";
                 return RedirectToPage();
-
             }
 
 
             return RedirectToPage("Index");
         }
+        public async Task<JsonResult> OnDeleteAddressAsync([FromBody] AddressDeleteModel model)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+                object payload = new
+                {
+                    Fields = new Dictionary<string, object>
+                    {
+                        ["TYPE_ID"] = model.Type_id,
+                        ["ENTITY_TYPE_ID"] = model.Entity_type_id,
+                        ["ENTITY_ID"] = model.Entity_id + "",
+                    },
+                };
 
-        public async Task<JsonResult> OnGetAddressAsync(int requisiteId, int pageIndex = 1)
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.address.delete",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in deleting address: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
+        }
+        public async Task<JsonResult> OnPostEditAddressAsync([FromBody] AddressCreateModel model)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+
+                object payload = new
+                {
+                    Fields = new Dictionary<string, object>
+                    {
+                        ["TYPE_ID"] = model.Type_id,
+                        ["ENTITY_TYPE_ID"] = model.Entity_type_id,
+                        ["ENTITY_ID"] = model.Entity_id,
+                        ["CITY"] = model.City,
+                        ["REGION"] = model.Region,
+                        ["PROVINCE"] = model.Province,
+                        ["COUNTRY"] = model.Country
+                    },
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.address.update",
+                    Payload = payload
+                };
+
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in updating address: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
+        }
+        public async Task<JsonResult> OnPostCreateAddressAsync([FromBody] AddressCreateModel model)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+                object payload = new
+                {
+                    Fields = new Dictionary<string, object>
+                    {
+                        ["TYPE_ID"] = model.Type_id,
+                        ["ENTITY_TYPE_ID"] = model.Entity_type_id,
+                        ["ENTITY_ID"] = model.Entity_id,
+                        ["CITY"] = model.City,
+                        ["REGION"] = model.Region,
+                        ["PROVINCE"] = model.Province,
+                        ["COUNTRY"] = model.Country
+                    },
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.address.add",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in creating address: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
+        }
+        public async Task<JsonResult> OnPostCreateBankAsync([FromBody] BankCreateModel model)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+
+                object payload = new
+                {
+                    Fields = new Dictionary<string, object>
+                    {
+                        ["ENTITY_ID"] = model.Entity_id,
+                        ["NAME"] = model.Name,
+                        ["RQ_ACC_NUM"] = model.Rq_acc_num,
+                    },
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.requisite.bankdetail.add",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in creating bank: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
+        }
+        public async Task<JsonResult> OnPostEditBankAsync([FromBody] BankUpdateModel model)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+            
+                object payload = new
+                {
+                    ID = model.Id,
+                    Fields = new Dictionary<string, object>
+                    {
+                        ["NAME"] = model.Name,
+                        ["RQ_ACC_NUM"] = model.Rq_acc_num,
+                    },
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.requisite.bankdetail.update",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in updating bank: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
+        }
+        public async Task<JsonResult> OnDeleteBankAsync([FromBody] int id)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+                object payload = new
+                {
+                    ID = id
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.requisite.bankdetail.delete",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in deleting address: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
+        }
+        public async Task<JsonResult> OnGetAddressAsync(int requisiteId)
         {
             var (clientId, clientSecret) = GetClientCredentials();
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
@@ -221,9 +601,7 @@ namespace Bitrix24Website.Pages
                 FILTER = new Dictionary<string, object>
                 {
                     ["=ENTITY_ID"] = requisiteId
-                },
-                SELECT = new string[] { "ENTITY_ID", "ADDRESS_1", "ADDRESS_2", "CITY", "REGION", "PROVINCE", "COUNTRY" },
-                START = (pageIndex - 1) * 50
+                }
             };
 
             var requestObject = new
@@ -252,12 +630,9 @@ namespace Bitrix24Website.Pages
             var root = doc.RootElement;
 
             var data = root.GetProperty("result").Deserialize<List<Address>>();
-            int total = root.GetProperty("total").GetInt32();
 
-            return new JsonResult(new PaginationResult<Address>(pageIndex, total, data));
+            return new JsonResult(new { success = true, data });
         }
-
-
         public async Task<JsonResult> OnGetBankAsync(int requisiteId, int pageIndex = 1)
         {
             var (clientId, clientSecret) = GetClientCredentials();
@@ -272,7 +647,7 @@ namespace Bitrix24Website.Pages
                 {
                     ["=ENTITY_ID"] = requisiteId
                 },
-                SELECT = new string[] { "ID", "NAME", "RQ_ACC_NUM", "ACTIVE" },
+                SELECT = new string[] { "ID", "ENTITY_ID", "NAME", "RQ_ACC_NUM", "ACTIVE" },
                 START = (pageIndex - 1) * 50
             };
 
@@ -304,7 +679,167 @@ namespace Bitrix24Website.Pages
             var data = root.GetProperty("result").Deserialize<List<Bank>>();
             int total = root.GetProperty("total").GetInt32();
 
-            return new JsonResult(new PaginationResult<Bank>(pageIndex, total, data));
+            return new JsonResult(new PaginationResult<Bank>(pageIndex, total, data, true));
+        }
+        public async Task<JsonResult> OnPostCreateProfileAsync([FromBody] RequisiteCreateModel model)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+                object payload = new
+                {
+                    Fields = new Dictionary<string, object>
+                    {
+                        ["ENTITY_TYPE_ID"] = model.EntityTypeId,
+                        ["ENTITY_ID"] = model.EntityId,
+                        ["PRESET_ID"] = model.PresetId,
+                        ["NAME"] = model.Name,
+                    },
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.requisite.add",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in creating requisite: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
+        }
+        public async Task<JsonResult> OnPostEditProfileAsync([FromBody] RequisiteEditModel model)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+                object payload = new
+                {
+                    ID = model.Id,
+                    Fields = new Dictionary<string, object>
+                    {
+                        ["NAME"] = model.Name,
+                    },
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.requisite.update",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in updating requisite: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
+        }
+        public async Task<JsonResult> OnDeleteProfileAsync([FromBody] int id)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
+                }
+                var client = _httpClientFactory.CreateClient();
+                object payload = new
+                {
+                    ID = id,
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.requisite.delete",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in deleting requisite: {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                    }
+                    else
+                    {
+                        return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
+            }
+
+
+            return new JsonResult(new { success = true });
         }
     }
 }

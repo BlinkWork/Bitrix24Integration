@@ -26,7 +26,12 @@ namespace Bitrix24Website.Pages
         public string SearchString { get; set; }
         [BindProperty(SupportsGet = true)]
         public int Page { get; set; } = 1;
-
+        private (string? clientId, string? clientSecret) GetClientCredentials()
+        {
+            var clientId = HttpContext.Session.GetString("clientId");
+            var clientSecret = HttpContext.Session.GetString("clientSecret");
+            return (clientId, clientSecret);
+        }
         public async Task<IActionResult> OnGetAsync()
         {
             var clientId = HttpContext.Session.GetString("clientId");
@@ -42,14 +47,14 @@ namespace Bitrix24Website.Pages
 
                 object payload = new
                 {
-                    SELECT = new string[] { "ID", "NAME", "BIRTHDATE", "ADDRESS", "EMAIL", "PHONE", "WEB" },
+                    SELECT = new string[] { "ID", "NAME", "BIRTHDATE", "EMAIL", "PHONE", "WEB" },
                     START = (Page - 1) * 50
                 };
                 if (!string.IsNullOrWhiteSpace(SearchString))
                 {
                     payload = new
                     {
-                        SELECT = new string[] { "ID", "NAME", "BIRTHDATE", "ADDRESS", "EMAIL", "PHONE", "WEB" },
+                        SELECT = new string[] { "ID", "NAME", "BIRTHDATE", "EMAIL", "PHONE", "WEB" },
                         FILTER = new Dictionary<string, object>
                         {
                             ["%NAME"] = SearchString
@@ -100,7 +105,8 @@ namespace Bitrix24Website.Pages
             }
             catch (HttpRequestException httpEx)
             {
-                TempData["ToastMessage"] = $"Lỗi mạng: {httpEx.Message}";
+                TempData["ToastMessage"] = $"Lỗi mạng: {httpEx.Message}"; 
+                Console.WriteLine("Error in index: " + httpEx.Message);
             }
             catch (JsonException jsonEx)
             {
@@ -109,10 +115,56 @@ namespace Bitrix24Website.Pages
             }
             catch (Exception ex)
             {
-                TempData["ToastMessage"] = $"Lỗi: {ex.Message}";
+                TempData["ToastMessage"] = $"Lỗi: {ex.Message}"; 
+                Console.WriteLine("Error in index: " + ex.Message);
             }
 
             return Page();
+        }
+
+        public async Task<IActionResult> OnPostDelete(int id)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    TempData["ToastMessage"] = $"Thiếu client id và client secret";
+                    return RedirectToPage("/Login");
+                }
+                var client = _httpClientFactory.CreateClient();
+                object payload = new
+                {
+                    ID = id
+                };
+
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.contact.delete",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error delete in index: {responseMsg}");
+                    TempData["ToastMessage"] = $"{responseMsg}";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastMessage"] = $"Đã có lỗi xảy ra";
+            }
+
+            return RedirectToPage("Index");
         }
     }
 }
