@@ -117,17 +117,20 @@
                                 <div class="flex justify-end space-x-2">
 
                                     <a asp-page="Detail" asp-route-id="@contact.ID" class="text-blue-600 hover:text-blue-900">
-                                        <svg fill="#000000" class="h-5 w-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <svg fill="#000000" class="h-10 w-10" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M15 11h7v2h-7zm1 4h6v2h-6zm-2-8h8v2h-8zM4 19h10v-1c0-2.757-2.243-5-5-5H7c-2.757 0-5 2.243-5 5v1h2zm4-7c1.995 0 3.5-1.505 3.5-3.5S9.995 5 8 5 4.5 6.505 4.5 8.5 6.005 12 8 12z" />
                                         </svg>
                                     </a>
-                                    <a asp-page="Delete" asp-route-id="@contact.ID" class="text-red-600 hover:text-red-900">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </a>
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@contact.ID" onsubmit="return confirm('Bạn có chắc muốn xóa liên hệ này?');" class="inline">
+                                        <button type="submit" class="text-red-600 hover:text-red-900 p-0 m-0 border-none bg-transparent">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </form>
                                     <button type="button" class="text-gray-600 hover:text-gray-900 md:hidden" onclick="toggleDetails(@contact.ID)">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                     </button>
@@ -227,6 +230,25 @@
     </script>
 }
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div id="toast-container" class="fixed top-4 right-4 z-50">
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-lg flex items-center" role="alert">
+            <svg class="fill-current w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z" />
+            </svg>
+            <span>@TempData["SuccessMessage"]</span>
+            <button class="ml-auto text-sm text-gray-500 hover:text-gray-700" onclick="this.parentElement.remove()">✖</button>
+        </div>
+    </div>
+
+    <script>
+        setTimeout(() => {
+            const toast = document.getElementById('toast-container');
+            if (toast) toast.remove();
+        }, 4000);
+    </script>
+}
 
 @section Scripts {
     <script>

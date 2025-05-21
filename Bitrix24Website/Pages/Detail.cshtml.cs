@@ -26,7 +26,7 @@ namespace Bitrix24Website.Pages
             var clientSecret = HttpContext.Session.GetString("clientSecret");
             return (clientId, clientSecret);
         }
-        public async Task<IActionResult> OnGetAsync(string id)
+        public async Task<IActionResult> OnGetAsync(string id, string? initRequisite)
         {
             var (clientId, clientSecret) = GetClientCredentials();
 
@@ -172,7 +172,14 @@ namespace Bitrix24Website.Pages
                     }
 
                     // Get first requisite
-                    RequisiteId = Requisites.Count != 0 ? int.Parse(Requisites.First().ID) : -1;
+                    if (string.IsNullOrEmpty(initRequisite))
+                    {
+                        RequisiteId = Requisites.Count != 0 ? int.Parse(Requisites.First().ID) : -1;
+                    }
+                    else
+                    {
+                        RequisiteId = int.Parse(initRequisite);
+                    }
                 }
             }
             catch (HttpRequestException httpEx)
@@ -416,6 +423,11 @@ namespace Bitrix24Website.Pages
                         return new JsonResult(new { success = false, message = $"{responseMsg}" });
                     }
                 }
+                else
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine(responseMsg);
+                }
             }
             catch (Exception ex)
             {
@@ -491,7 +503,7 @@ namespace Bitrix24Website.Pages
                     return new JsonResult(new { success = false, message = "Thiếu thông tin credentials" });
                 }
                 var client = _httpClientFactory.CreateClient();
-            
+
                 object payload = new
                 {
                     ID = model.Id,
@@ -620,8 +632,14 @@ namespace Bitrix24Website.Pages
             if (!response.IsSuccessStatusCode)
             {
                 var responseMsg = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Error : {responseMsg}");
-                return new JsonResult(new { success = false, message = "Failed to fetch address data" });
+                if (responseMsg.Contains("The given key was not present"))
+                {
+                    return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                }
+                else
+                {
+                    return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                }
             }
 
             var responseString = await response.Content.ReadAsStringAsync();
@@ -667,8 +685,14 @@ namespace Bitrix24Website.Pages
             if (!response.IsSuccessStatusCode)
             {
                 var responseMsg = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Error : {responseMsg}");
-                return new JsonResult(new { success = false, message = "Failed to fetch bank data" });
+                if (responseMsg.Contains("The given key was not present"))
+                {
+                    return new JsonResult(new { success = false, message = $"Token đã hết hạn, vui lòng thay đổi credentials" });
+                }
+                else
+                {
+                    return new JsonResult(new { success = false, message = $"{responseMsg}" });
+                }
             }
 
             var responseString = await response.Content.ReadAsStringAsync();
@@ -683,6 +707,7 @@ namespace Bitrix24Website.Pages
         }
         public async Task<JsonResult> OnPostCreateProfileAsync([FromBody] RequisiteCreateModel model)
         {
+            int data = -1;
             try
             {
                 var (clientId, clientSecret) = GetClientCredentials();
@@ -728,14 +753,19 @@ namespace Bitrix24Website.Pages
                         return new JsonResult(new { success = false, message = $"{responseMsg}" });
                     }
                 }
+                else
+                {
+                    var responseString = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(responseString);
+                    var root = doc.RootElement;
+                    data = root.GetProperty("result").GetInt32();
+                }
             }
             catch (Exception ex)
             {
                 return new JsonResult(new { success = false, message = $"Đã có lỗi xảy ra" });
             }
-
-
-            return new JsonResult(new { success = true });
+            return new JsonResult(new { success = true, response = data });
         }
         public async Task<JsonResult> OnPostEditProfileAsync([FromBody] RequisiteEditModel model)
         {
@@ -840,6 +870,68 @@ namespace Bitrix24Website.Pages
 
 
             return new JsonResult(new { success = true });
+        }
+
+        public async Task<IActionResult> OnPostUpdateContactAsync(Contact contact)
+        {
+            try
+            {
+                var (clientId, clientSecret) = GetClientCredentials();
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    TempData["ToastMessage"] = $"Thiếu client id và client secret";
+                    return RedirectToPage();
+                }
+                var client = _httpClientFactory.CreateClient();
+
+                object payload = new
+                {
+                    ID = contact.ID,
+                    Fields = new Dictionary<string, object>
+                    {
+                        ["NAME"] = contact.NAME,
+                        ["PHONE"] = contact.PHONE,
+                        ["EMAIL"] = contact.EMAIL,
+                        ["WEB"] = contact.WEB,
+                    }
+                };
+
+                var requestObject = new
+                {
+                    ClientID = clientId,
+                    ClientSecret = clientSecret,
+                    Method = "crm.contact.update",
+                    Payload = payload
+                };
+
+                var requestJson = JsonSerializer.Serialize(requestObject);
+                var requestContent = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("http://localhost:5010/api/CallApi", requestContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseMsg = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error in updating contact : {responseMsg}");
+                    if (responseMsg.Contains("The given key was not present"))
+                    {
+                        TempData["ToastMessage"] = "Token đã hết hạn, vui lòng thay đổi credentials";
+                    }
+                    else
+                    {
+                        TempData["ToastMessage"] = $"{responseMsg}";
+                    }
+                } else
+                {
+                    TempData["SuccessMessage"] = "Sửa thông tin liên lạc thành công";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastMessage"] = $"Đã có lỗi xảy ra";
+            }
+
+            return RedirectToPage();
         }
     }
 }

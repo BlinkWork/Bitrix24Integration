@@ -41,7 +41,7 @@ namespace Bitrix24API.Utils
             if (!response.IsSuccessStatusCode)
             {
                 var message = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Cannot refresh cause {message}");
+                throw new Exception($"Không thể refresh token do {message}");
             }
 
             var json = await response.Content.ReadAsStringAsync();

@@ -157,14 +157,16 @@ namespace Bitrix24Website.Pages
                     var responseMsg = await response.Content.ReadAsStringAsync();
                     Console.WriteLine($"Error delete in index: {responseMsg}");
                     TempData["ToastMessage"] = $"{responseMsg}";
+                } else
+                {
+                    TempData["SuccessMessage"] = "Xóa liên lạc thành công";
                 }
             }
             catch (Exception ex)
             {
                 TempData["ToastMessage"] = $"Đã có lỗi xảy ra";
             }
-
-            return RedirectToPage("Index");
+            return RedirectToPage();
         }
     }
 }

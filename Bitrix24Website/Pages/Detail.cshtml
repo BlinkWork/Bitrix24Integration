@@ -1,79 +1,152 @@
 ﻿@page "{id:int}"
 @model DetailModel
 @using System.Text.Json;
+@using Models;
+
 @{
     ViewData["Title"] = "Thông tin liên hệ";
 }
 
-<div class="bg-white p-6 rounded shadow">
-    <div class="mt-6 flex justify-between items-center">
-        <div>
-            <a asp-page="Index" class="px-4 py-2 text-gray-600 hover:underline">Quay lại</a>
-        </div>
+@functions {
+    string GetPhoneIcon(string type)
+    {
+        switch (type)
+        {
+            case "WORK": return "fas fa-building";
+            case "MOBILE": return "fas fa-mobile-alt";
+            case "HOME": return "fas fa-home";
+            case "FAX": return "fas fa-fax";
+            case "PAGER": return "fas fa-pager";
+            default: return "fas fa-phone";
+        }
+    }
+
+    string GetEmailIcon(string type)
+    {
+        switch (type)
+        {
+            case "WORK": return "fas fa-briefcase";
+            case "HOME": return "fas fa-home";
+            default: return "fas fa-envelope";
+        }
+    }
+
+    string GetWebIcon(string type)
+    {
+        switch (type)
+        {
+            case "FACEBOOK": return "fab fa-facebook";
+            case "TWITTER": return "fab fa-twitter";
+            case "VK": return "fab fa-vk";
+            case "LIVEJOURNAL": return "fas fa-pencil";
+            default: return "fas fa-globe";
+        }
+    }
+}
+<div class="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <a asp-page="Index"
+           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 transition">
+            <i class="fas fa-arrow-left mr-2"></i> Quay lại
+        </a>
+
         @if (Model.RequisiteId != -2)
         {
-            <div class="flex space-x-2">
-                <a asp-page="Edit" asp-route-id="@Model.Contact.ID" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Chỉnh sửa cơ bản</a>
+            <div class="flex space-x-3">
+                <button id="edit-contact" class="bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 transition">Chỉnh sửa cơ bản</button>
                 <form method="post" asp-page-handler="Delete" asp-route-id="@Model.Contact.ID" onsubmit="return confirm('Bạn chắc chứ?');">
-                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Xóa</button>
+                    <button type="submit" class="bg-red-600 text-white px-5 py-2 rounded-md hover:bg-red-700 transition">Xóa</button>
                 </form>
             </div>
         }
     </div>
-    @Html.AntiForgeryToken()
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4">@Model.Contact.NAME</h2>
-    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><dt class="font-medium text-gray-700">ID</dt><dd>@Model.Contact.ID</dd></div>
+
+    <h1 class="text-3xl font-extrabold text-gray-900 text-center mb-8">@Model.Contact.NAME</h1>
+
+    <div class="bg-gray-50 rounded-md p-4 flex justify-around text-gray-700 mb-8 shadow-sm border border-gray-200">
+        <div class="text-center">
+            <dt class="font-semibold">ID</dt>
+            <dd class="mt-1 break-words">@Model.Contact.ID</dd>
+        </div>
         @if (Model.RequisiteId != -2)
         {
-            <div><dt class="font-medium text-gray-700">Tạo lúc</dt><dd>@Model.Contact.DATE_CREATE</dd></div>
+            <div class="text-center">
+                <dt class="font-semibold">Tạo lúc</dt>
+                <dd class="mt-1">@Model.Contact.DATE_CREATE?.ToString("dd/MM/yyyy HH:mm")</dd>
+            </div>
         }
-    </dl>
+    </div>
 
-    <h3 class="mt-6 text-lg font-medium text-gray-700">Số điện thoại</h3>
-    <ul class="list-disc ml-5">
-        @if (Model.Contact.PHONE != null)
-        {
-            foreach (var ph in Model.Contact.PHONE)
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section class="bg-white shadow rounded-lg p-5">
+            <h4 class="text-xl font-semibold text-gray-800 mb-3">Số điện thoại</h4>
+            @if (Model.Contact.PHONE?.Any() == true)
             {
-                <li>@ph.VALUE_TYPE: @ph.VALUE</li>
+                <ul class="space-y-3">
+                    @foreach (var ph in Model.Contact.PHONE)
+                    {
+                        <li class="flex items-center space-x-3 border-b last:border-b-0 pb-2">
+                            <i class="@GetPhoneIcon(ph.VALUE_TYPE) text-gray-500 text-lg" aria-hidden="true"></i>
+                            <div>
+                                <a href="tel:@ph.VALUE" class="font-medium text-blue-700 hover:underline">@ph.VALUE</a>
+                                <div class="text-sm text-gray-500">(@ph.VALUE_TYPE)</div>
+                            </div>
+                        </li>
+                    }
+                </ul>
             }
-        }
-        else
-        {
-            <p>Không có</p>
-        }
-    </ul>
+            else
+            {
+                <p class="text-gray-400 italic">Không có</p>
+            }
+        </section>
 
-    <h3 class="mt-4 text-lg font-medium text-gray-700">Emails</h3>
-    <ul class="list-disc ml-5">
-        @if (Model.Contact.EMAIL != null)
-        {
-            foreach (var em in Model.Contact.EMAIL)
+        <section class="bg-white shadow rounded-lg p-5">
+            <h4 class="text-xl font-semibold text-gray-800 mb-3">Email</h4>
+            @if (Model.Contact.EMAIL?.Any() == true)
             {
-                <li>@em.VALUE_TYPE: @em.VALUE</li>
+                <ul class="space-y-3">
+                    @foreach (var em in Model.Contact.EMAIL)
+                    {
+                        <li class="flex items-center space-x-3 border-b last:border-b-0 pb-2">
+                            <i class="@GetEmailIcon(em.VALUE_TYPE) text-gray-500 text-lg" aria-hidden="true"></i>
+                            <div>
+                                <a href="mailto:@em.VALUE" class="font-medium text-blue-700 hover:underline">@em.VALUE</a>
+                                <div class="text-sm text-gray-500">(@em.VALUE_TYPE)</div>
+                            </div>
+                        </li>
+                    }
+                </ul>
             }
-        }
-        else
-        {
-            <p>Không có</p>
-        }
-    </ul>
+            else
+            {
+                <p class="text-gray-400 italic">Không có</p>
+            }
+        </section>
 
-    <h3 class="mt-4 text-lg font-medium text-gray-700">Websites</h3>
-    <ul class="list-disc ml-5">
-        @if (Model.Contact.EMAIL != null)
-        {
-            foreach (var w in Model.Contact.WEB)
+        <section class="bg-white shadow rounded-lg p-5 md:col-span-2">
+            <h4 class="text-xl font-semibold text-gray-800 mb-3">Website</h4>
+            @if (Model.Contact.WEB?.Any() == true)
             {
-                <li>@w.VALUE_TYPE: <a href="@("https://" + w.VALUE)" target="_blank" class="text-blue-600 hover:underline">@w.VALUE</a></li>
+                <ul class="space-y-3">
+                    @foreach (var w in Model.Contact.WEB)
+                    {
+                        <li class="flex items-center space-x-3 border-b last:border-b-0 pb-2">
+                            <i class="@GetWebIcon(w.VALUE_TYPE) text-gray-500 text-lg" aria-hidden="true"></i>
+                            <div>
+                                <a href="@("https://" + w.VALUE)" target="_blank" class="text-blue-700 hover:underline">@w.VALUE</a>
+                                <div class="text-sm text-gray-500">(@w.VALUE_TYPE)</div>
+                            </div>
+                        </li>
+                    }
+                </ul>
             }
-        }
-        else
-        {
-            <p>Không có</p>
-        }
-    </ul>
+            else
+            {
+                <p class="text-gray-400 italic">Không có</p>
+            }
+        </section>
+    </div>
 
     <div class="flex flex-wrap justify-between items-end w-full">
         @if (Model.Requisites != null && Model.Requisites.Any())
@@ -100,7 +173,7 @@
 
         <div class="flex space-x-2 mt-6 ml-auto">
             <button type="button" id="create-profile" class="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">Tạo hồ sơ</button>
-            <button type="button" id="edit-profile" class="focus:outline-none text-white bg-yellow-700 hover:bg-yellow-800 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-yellow-600 dark:hover:bg-yellow-700 dark:focus:ring-yellow-900">Sửa hồ sơ</button>
+            <button type="button" id="edit-profile" class="focus:outline-none text-white bg-yellow-400 hover:bg-yellow-500 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:focus:ring-yellow-900">Sửa hồ sơ</button>
             <button type="button" id="delete-profile" class="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">Xóa hồ sơ</button>
         </div>
     </div>
@@ -128,7 +201,45 @@
         <div id="bank-pagination" class="mt-4 flex justify-center space-x-2"></div>
     </div>
 </div>
-<div id="bankModal" class="modal hidden fixed inset-0 bg-gray-900/75 flex justify-center items-center z-50 overflow-y-auto">
+<div id="editModal" class="modal fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+    <div class="bg-white p-6 rounded-lg w-full max-w-2xl shadow-lg mt-12 mb-12 overflow-y-auto">
+        <h2 class="text-xl font-semibold mb-4">Chỉnh sửa liên hệ</h2>
+        <form method="post" asp-page-handler="UpdateContact">
+            <input type="hidden" name="ID" value="@Model.Contact.ID" />
+
+            <div class="mb-4">
+                <label class="block font-semibold text-gray-700">Tên</label>
+                <input type="text" name="NAME" id="contactName" class="mt-1 w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+
+            <div class="mb-4">
+                <label class="block font-semibold text-gray-700">Số điện thoại</label>
+                <div id="phoneContainer" class="space-y-2  h-20 overflow-y-auto"></div>
+                <button type="button" id="addPhone" class="text-blue-600 text-sm mt-1 hover:text-blue-800">+ Thêm số</button>
+            </div>
+
+            <div class="mb-4">
+                <label class="block font-semibold text-gray-700">Email</label>
+                <div id="emailContainer" class="space-y-2 h-20 overflow-y-auto"></div>
+                <button type="button" id="addEmail" class="text-blue-600 text-sm mt-1 hover:text-blue-800">+ Thêm email</button>
+            </div>
+
+            <div class="mb-4">
+                <label class="block font-semibold text-gray-700">Website</label>
+                <div id="webContainer" class="space-y-2  h-20 overflow-y-auto"></div>
+                <button type="button" id="addWeb" class="text-blue-600 text-sm mt-1 hover:text-blue-800">+ Thêm website</button>
+            </div>
+
+            <div class="flex justify-end space-x-2 mt-6">
+                <button type="button" class="modal-close px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Hủy</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<div id="bankModal" class="modal hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6 md:p-8">
         <h2 id="bankModalTitle" class="text-xl font-semibold text-gray-900 mb-5">Tạo/Sửa Tài Khoản Ngân Hàng</h2>
 
@@ -153,7 +264,7 @@
     </div>
 </div>
 
-<div id="addressModal" class="modal hidden fixed inset-0 bg-gray-900/75 flex justify-center items-center z-50 overflow-y-auto">
+<div id="addressModal" class="modal hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 md:p-8">
         <h2 id="addressModalTitle" class="text-xl font-semibold text-gray-900 mb-5">Tạo/Sửa Địa Chỉ</h2>
 
@@ -195,14 +306,15 @@
     </div>
 </div>
 
-<div id="profileModal" class="modal hidden fixed inset-0 bg-gray-900/75 flex justify-center items-center z-50 overflow-y-auto">
+<div id="profileModal" class="modal hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 md:p-8">
         <h2 id="profileModalTitle" class="text-xl font-semibold text-gray-900 mb-5">Tạo/Sửa Hồ Sơ</h2>
 
         <form id="profileForm" class="space-y-4">
+            <input type="hidden" name="PROFILE_ID" id="profileId" />
             <div>
                 <label for="profileName" class="block text-sm font-medium text-gray-700">Tên</label>
-                <input type="text" name="profileName" id="profileName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                <input type="text" name="profileName" id="profileName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required />
             </div>
             <div class="flex justify-end gap-2 mt-5">
                 <button type="button" class="modal-close px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1">Hủy</button>
@@ -232,9 +344,31 @@
         }, 4000);
     </script>
 }
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div id="toast-container" class="fixed top-4 right-4 z-50">
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-lg flex items-center" role="alert">
+            <svg class="fill-current w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z" />
+            </svg>
+            <span>@TempData["SuccessMessage"]</span>
+            <button class="ml-auto text-sm text-gray-500 hover:text-gray-700" onclick="this.parentElement.remove()">✖</button>
+        </div>
+    </div>
+
+    <script>
+        setTimeout(() => {
+            const toast = document.getElementById('toast-container');
+            if (toast) toast.remove();
+        }, 4000);
+    </script>
+}
+
 <div id="toastContainer" class="fixed top-4 right-4 space-y-2 z-[9999]"></div>
 
 @section Scripts {
+
     <script>
         $(document).ready(function () {
             let contactId = @(Model.Contact.ID == null ? -1 : Model.Contact.ID);
@@ -247,6 +381,13 @@
 
             var addressTypes = @Html.Raw(JsonSerializer.Serialize(Model.AddressTypes));
             var profiles = @Html.Raw(JsonSerializer.Serialize(Model.Requisites));
+
+            const contactData = {
+                Name: @Html.Raw(Json.Serialize(Model.Contact.NAME)),
+                Phone: @Html.Raw(Json.Serialize(Model.Contact.PHONE ?? new List<ContactField>())),
+                Email: @Html.Raw(Json.Serialize(Model.Contact.EMAIL ?? new List<ContactField>())),
+                Web: @Html.Raw(Json.Serialize(Model.Contact.WEB ?? new List<ContactField>()))
+                                                            };
             var addressTypeRemains = addressTypes;
 
             if (requisiteId == -2) {
@@ -254,6 +395,7 @@
             }
             if (requisiteId <= 0) {
                 $("#delete-profile").hide();
+                $("#edit-profile").hide();
             }
 
             function openCreateProfileModal() {
@@ -264,10 +406,8 @@
             }
 
             function openEditProfileModal() {
-                const d = {
-                    entityId: $(this).data('entity-id'),
-                }
-                $('#profileName').val('');
+                profileFormMode = 'edit';
+                $('#profileName').val(profiles.find(type => Number(type.ID) === Number(requisiteId)).NAME);
                 $('#profileModal').removeClass('hidden');
                 $('#profileModalTitle').text('Sửa hồ sơ');
             }
@@ -357,7 +497,6 @@
                 }
             }
 
-
             function fetchAddress() {
                 if (requisiteId === -2) return;
                 if (requisiteId === -1) {
@@ -371,6 +510,7 @@
                     container.empty();
                     if (!data.success) {
                         container.append('<li class="text-red-500">Không thể tải dữ liệu địa chỉ.</li>');
+                        showToast(data.message, 'error');
                         return;
                     }
                     if (data.data?.length === 0) {
@@ -381,35 +521,38 @@
                     const usedTypeIds = new Set();
                     data.data.forEach(item => {
                         usedTypeIds.add(Number(item.typE_ID));
-                        container.append(`
-                                            <li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
-                                                <div class="flex items-start gap-3">
-                                                    <p class="text-sm font-semibold text-blue-600 min-w-[100px]">
-                                                        ${(addressTypes.find(t => t.ID == item.typE_ID) || {}).NAME || 'Không xác định'}
-                                                    </p>
-                                                <div>
-                                                            <p class="font-medium">${item.province ?? ''} ${item.country ?? ''}</p>
-                                                    <p class="text-sm text-gray-600">${item.city ?? ''} ${item.region ?? ''}</p>
-                                                    </div>
-                                                </div>
-                                                <div class="space-x-2">
-                                                    <button
-                                                        data-entity-id="${item.entitY_ID}"
-                                                      data-city="${item.city}"
-                                                      data-region="${item.region}"
-                                                      data-province="${item.province}"
-                                                      data-country="${item.country}"
-                                                      data-entity-type-id="${item.entitY_TYPE_ID}"
-                                                      data-type-id="${item.typE_ID}"
-                                                      class="btn-edit-address bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
-                                                    <button data-type-id=${item.typE_ID}
-                                                    data-entity-type-id=${item.entitY_TYPE_ID}
-                                                    data-entity-id=${item.entitY_ID} class="btn-delete-address bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
-                                                </div>
-                                            </li>
-                                        `);
+                        container.append(`<li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
+<div class="flex items-start gap-3">
+<p class="text-sm font-semibold text-blue-600 min-w-[100px]">
+${(addressTypes.find(t => t.ID == item.typE_ID) || {}).NAME || 'Không xác định'}
+</p>
+<div>
+<p class="font-medium">${item.province ?? ''} ${item.country ?? ''}</p>
+<p class="text-sm text-gray-600">${item.city ?? ''} ${item.region ?? ''}</p>
+</div>
+</div>
+<div class="space-x-2">
+<button
+data-entity-id="${item.entitY_ID}"
+data-city="${item.city}"
+data-region="${item.region}"
+data-province="${item.province}"
+data-country="${item.country}"
+data-entity-type-id="${item.entitY_TYPE_ID}"
+data-type-id="${item.typE_ID}"
+class="btn-edit-address bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
+<button data-type-id=${item.typE_ID}
+data-entity-type-id=${item.entitY_TYPE_ID}
+data-entity-id=${item.entitY_ID} class="btn-delete-address bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+</div>
+</li>`);
                     });
                     addressTypeRemains = addressTypes.filter(type => !usedTypeIds.has(type.ID));
+                    if (addressTypeRemains.length === 0) {
+                        $("#add-address").hide();
+                    } else {
+                        $("#add-address").show();
+                    }
                 });
             }
 
@@ -425,6 +568,7 @@
                     container.empty();
                     if (!data.success) {
                         container.append('<li class="text-red-500">Không thể tải dữ liệu địa chỉ.</li>');
+                        showToast(data.message, 'error');
                         return;
                     }
                     if (data.data?.length === 0) {
@@ -432,21 +576,19 @@
                     }
 
                     data.data.forEach(item => {
-                        container.append(`
-                                            <li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
-                                                <div>
-                                                    <p class="font-medium">${item.name ?? ''}</p>
-                                                    <p class="text-sm text-gray-600">Số tài khoản: ${item.rQ_ACC_NUM ?? ''}</p>
-                                                </div>
-                                                <div class="space-x-2">
-                                                    <button data-id=${item.id} data-name=${item.name} data-rq-acc-num=${item.rQ_ACC_NUM} class="btn-edit-bank bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
-                                                    <button data-id=${item.id} class="btn-delete-bank bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
-                                                </div>
-                                            </li>
-                                        `);
+                        container.append(`<li class="p-3 bg-gray-100 rounded shadow flex justify-between items-center">
+<div>
+<p class="font-medium">${item.name ?? ''}</p>
+<p class="text-sm text-gray-600">Số tài khoản: ${item.rQ_ACC_NUM ?? ''}</p>
+</div>
+<div class="space-x-2">
+<button data-id=${item.id} data-name=${item.name} data-rq-acc-num=${item.rQ_ACC_NUM} class="btn-edit-bank bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Chỉnh sửa</button>
+<button data-id=${item.id} class="btn-delete-bank bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+</div>
+</li>`);
                     });
 
-                    renderPagination('#bank-pagination', data.total, page, (newPage) => {
+                    renderPagination('#bank-pagination', data.total, bankPage, (newPage) => {
                         bankPage = newPage;
                         fetchBank(bankPage);
                     });
@@ -455,6 +597,28 @@
 
             $('#addressForm').on('submit', function (e) {
                 e.preventDefault();
+                // validate
+                let city = $("#city").val().trim();
+                if (city === '') {
+                    showToast('Thiếu phường/xã', 'error')
+                    return;
+                }
+                let province = $("#province").val().trim();
+                if (province === '') {
+                    showToast('Thiếu quận/huyện', 'error')
+                    return;
+                }
+                let region = $("#region").val().trim();
+                if (region === '') {
+                    showToast('Thiếu tỉnh/thành phố', 'error')
+                    return;
+                }
+                let country = $("#country").val().trim();
+                if (country === '') {
+                    showToast('Thiếu quốc gia', 'error')
+                    return;
+                }
+
                 const handlerName = addressFormMode === 'create' ? 'CreateAddress' : 'EditAddress';
                 $.ajax({
                     url: `?handler=${handlerName}`,
@@ -467,10 +631,10 @@
                         Type_id: $('#addressType').val(),
                         Entity_type_id: 8,
                         Entity_id: requisiteId,
-                        City: $('#city').val(),
-                        Region: $('#region').val(),
-                        Province: $('#province').val(),
-                        Country: $('#country').val()
+                        City: city,
+                        Region: region,
+                        Province: province,
+                        Country: country
                     }),
                     success: function (res) {
                         if (res.success) {
@@ -490,16 +654,28 @@
 
             $('#bankForm').on('submit', function (e) {
                 e.preventDefault();
-                const handlerName = addressFormMode === 'create' ? 'CreateBank' : 'EditBank';
+                // validate
+                let name = $("#bankName").val().trim();
+                if (name === '') {
+                    showToast('Thiếu tên ngân hàng', 'error')
+                    return;
+                }
+                let bankAccount = $("#bankAccount").val().trim();
+                if (bankAccount === '') {
+                    showToast('Thiếu số tài khoản', 'error')
+                    return;
+                }
 
-                const obj = (addressFormMode === 'create' ? {
+                const handlerName = bankFormMode === 'create' ? 'CreateBank' : 'EditBank';
+
+                const obj = (bankFormMode === 'create' ? {
                     Entity_id: requisiteId,
-                    Name: $("#bankName").val(),
-                    Rq_acc_num: $("#bankAccount").val(),
+                    Name: name,
+                    Rq_acc_num: bankAccount,
                 } : {
                     Id: $("#bankEntityId").val(),
-                    Name: $("#bankName").val(),
-                    Rq_acc_num: $("#bankAccount").val(),
+                    Name: name,
+                    Rq_acc_num: bankAccount,
                 });
 
                 $.ajax({
@@ -527,27 +703,93 @@
 
             });
 
+            $('#profileForm').on('submit', function (e) {
+                e.preventDefault();
+                let name = $("#profileName").val().trim();
+                if (name === '') {
+                    showToast('Thiếu tên hồ sơ', 'error')
+                    return;
+                }
+
+                const handlerName = profileFormMode === 'create' ? 'CreateProfile' : 'EditProfile';
+
+                const obj = (profileFormMode === 'create' ? {
+                    EntityTypeId: 3,
+                    EntityId: contactId,
+                    PresetId: 3,
+                    Name: name
+                } : {
+                    Id: requisiteId,
+                    Name: name
+                });
+
+                $.ajax({
+                    url: `?handler=${handlerName}`,
+                    type: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    data: JSON.stringify(obj),
+                    success: function (res) {
+                        if (res.success) {
+                            $('#profileModal').addClass('hidden');
+                            showToast('Hồ sơ đã được lưu thành công!', 'success');
+                            const currentPath = window.location.origin + window.location.pathname;
+                            if (profileFormMode === 'create') {
+                                const newUrl = `${currentPath}?initRequisite=${res.response}`;
+                                window.location.href = newUrl;
+                            } else {
+                                const newUrl = `${currentPath}?initRequisite=${requisiteId}`;
+                                window.location.href = newUrl;
+                            }
+                        } else {
+                            showToast(res.message || 'Đã xảy ra lỗi khi lưu hồ sơ.', 'error');
+                        }
+                    },
+                    error: function (err) {
+                        console.error(err);
+                        showToast('Có lỗi xảy ra khi lưu hồ sơ.', 'error');
+                    }
+                });
+
+            });
 
             fetchBank();
             fetchAddress();
-
-            $('#btn-open-create-bank').on('click', function () {
-                $('#createBankModal').removeClass('hidden');
-            });
 
             $(document)
                 .on('click', '#add-address', openCreateAddressModal)
                 .on('click', '.btn-edit-address', openEditAddressModal)
                 .on('click', '#create-profile', openCreateProfileModal)
+                .on('click', '#edit-profile', openEditProfileModal)
+                .on('click', '#delete-profile', deleteProfile)
                 .on('click', '.btn-delete-address', deleteAddress)
 
                 .on('click', '#add-bank', openCreateBankModal)
                 .on('click', '.btn-edit-bank', openEditBankModal)
                 .on('click', '.btn-delete-bank', deleteBank)
-
+                .on('click', '#edit-contact', openEditModal)
+                .on('click', '.remove-btn', removeField)
                 .on('click', '.modal-close', function () {
                     $(this).closest('.modal').addClass('hidden');
                 });
+            $('#addPhone').click(() => addField('phoneContainer', 'Phone'));
+            $('#addEmail').click(() => addField('emailContainer', 'Email'));
+            $('#addWeb').click(() => addField('webContainer', 'Web'));
+
+            function removeField() {
+                const parent = $(this).closest('.flex');
+                const hiddenIdInput = parent.find('input[type="hidden"][name$=".ID"]');
+
+                if (hiddenIdInput.length > 0) {
+                    const valueInput = parent.find('input[name$=".VALUE"]');
+                    valueInput.val('');
+                    parent.addClass('hidden');
+                } else {
+                    parent.remove();
+                }
+            }
 
             function deleteAddress() {
                 const typeId = $(this).data('type-id');
@@ -612,35 +854,67 @@
                 }
             }
 
-            $("#delete-profile").click(() => {
-
-            }); 
-            $("#edit-profile").click(() => {
-
-            }); 
-            $("#create-profile").click(() => {
-
-            });
-
-            function refreshRequisiteSelect() {
-                const $sel = $('#addressType').empty();
-                // if (requisiteId > 0) {
-                //     const profile = profiles.find(type => Number(type.ID) === Number(selected));
-                //     const defaultOption = $('<option>').val(addressType.ID).text(addressType.NAME);
-                //     $sel.append(defaultOption);
-                // }
-                // profiles.forEach(t => {
-                //     const opt = $('<option>').val(t.ID).text(t.NAME);
-                //     $sel.append(opt);
-                // });
+            function deleteProfile() {
+                if (confirm('Bạn chắc chắn xóa chứ?')) {
+                    $.ajax({
+                        url: `?handler=Profile`,
+                        type: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        data: JSON.stringify(requisiteId),
+                        success: function (res) {
+                            if (res.success) {
+                                $('#addressModal').addClass('hidden');
+                                showToast('Xóa tài khoản ngân hàng thành công!', 'success');
+                                const url = new URL(window.location.href);
+                                const baseUrl = url.origin + url.pathname;
+                                window.location.href = baseUrl;
+                            } else {
+                                showToast(res.message || 'Đã xảy ra lỗi khi xóa tài khoản ngân hàng.', 'error');
+                            }
+                        },
+                        error: function (err) {
+                            console.error(err);
+                            showToast('Có lỗi xảy ra khi xóa tài khoản ngân hàng.', 'error');
+                        }
+                    });
+                }
             }
 
+            function openEditModal() {
+                $("#contactName").val(contactData.Name);
+                renderFields("Phone", "phoneContainer");
+                renderFields("Email", "emailContainer");
+                renderFields("Web", "webContainer");
+                $('#editModal').removeClass('hidden');
+            }
+
+            function renderFields(typeId, containerId) {
+                const $container = $('#' + containerId);
+                $container.empty();
+
+                contactData[typeId].forEach((item, index) => {
+                    const $field = $(`<div class="flex items-center space-x-2 mt-2">
+<select name="${typeId}[${index}].VALUE_TYPE" class="border rounded px-2 py-1">
+${getOptions(typeId, item.valuE_TYPE)}
+</select>
+<input type="hidden" name="${typeId}[${index}].ID" value="${item.id}" />
+<input type="text" name="${typeId}[${index}].VALUE" value="${item.value}" class="border rounded px-2 py-1 flex-1" placeholder="Nhập giá trị" required/>
+<input type="hidden" name="${typeId}[${index}].TYPE_ID" value="${item.typE_ID}" />
+<button type="button" class="text-red-500 remove-btn">X</button>
+</div>`);
+                    $container.append($field);
+
+                });
+            }
+
+
+
+
             function showToast(message, type = 'success') {
-                const toast = $(`
-                                <div class="px-4 py-2 rounded shadow text-white animate-fade-in-down ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}">
-                                    ${message}
-                                </div>
-                            `);
+                const toast = $(`<div class="px-4 py-2 rounded shadow text-white animate-fade-in-down ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}">${message}</div>`);
 
                 $('#toastContainer').append(toast);
 
@@ -649,7 +923,52 @@
                 }, 3000);
             }
 
+
+            function addField(containerId, typeId) {
+                const $container = $('#' + containerId);
+                const index = $container.children().length;
+
+                const isPhone = typeId.toLowerCase() === 'phone';
+                const inputType = isPhone ? 'tel' : 'text';
+
+                const $field = $(`<div class="flex items-center space-x-2 mt-2">
+<select name="${typeId}[${index}].VALUE_TYPE" class="border rounded px-2 py-1">
+${getOptions(typeId, "Work")}
+</select>
+<input type="${inputType}" name="${typeId}[${index}].VALUE" class="border rounded px-2 py-1 flex-1 phone-input" placeholder="Nhập giá trị" required />
+<input type="hidden" name="${typeId}[${index}].TYPE_ID" value="${typeId}" />
+<button type="button" class="text-red-500 remove-btn">X</button>
+</div>`);
+
+                $container.append($field);
+
+            }
         });
 
+        $('#profileForm').on('submit', function (e) {
+            const name = $('#profileName').val().trim();
+
+            if (!name) {
+                e.preventDefault();
+                showToast('Tên không được để trống.', 'error');
+                $('#profileName').focus();
+            }
+        });
+
+        function getOptions(typeId, selected) {
+            let options = [];
+            switch (typeId) {
+                case "Phone":
+                    options = ["WORK", "MOBILE", "FAX", "HOME", "PAGER", "MAILING", "OTHER"];
+                    break;
+                case "Email":
+                    options = ["WORK", "HOME", "MAILING", "OTHER"];
+                    break;
+                case "Web":
+                    options = ["WORK", "HOME", "FACEBOOK", "VK", "LIVEJOURNAL", "TWITTER", "OTHER"];
+                    break;
+            }
+            return options.map(opt => `<option value="${opt}" ${opt === selected ? 'selected' : ''}>${opt}</option>`).join('');
+        }
     </script>
 }

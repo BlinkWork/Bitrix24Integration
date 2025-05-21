@@ -1,38 +1,161 @@
 ﻿@page
-@model Bitrix24Website.Pages.CreateModel
+@model CreateModel
 @{
-    ViewData["Title"] = "Tạo mới liên hệ";
+    ViewData["Title"] = "Tạo Liên Hệ Mới";
 }
 
-<div class="max-w-4xl mx-auto">
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Add New Contact</h1>
-            <a asp-page="./Index" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="-ml-1 mr-2 h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to List
-            </a>
-        </div>
+<div class="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+        <a href="/Index" class="top-4 left-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Quay về</a>
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Tạo Liên Hệ Mới</h2>
+        <form method="post" id="createContactForm" class="space-y-6">
+            @Html.AntiForgeryToken()
+            
+            <div>
+                <label for="NAME" class="block text-sm font-medium text-gray-700">Tên <span class="text-red-500">*</span></label>
+                <input type="text" name="NAME" class="mt-1 w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Nhập tên liên hệ" />
+            </div>
 
-        <form method="post">
-            @* <partial name="_ContactForm" model="" /> *@
-
-            <div class="mt-6 flex justify-end">
-                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Save Contact
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                <div id="phoneContainer" class="space-y-2 mt-2"></div>
+                <button type="button" id="addPhone" class="text-blue-600 text-sm hover:text-blue-800 flex items-center mt-2">
+                    <i class="fas fa-plus mr-1"></i> Thêm số điện thoại
                 </button>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Email</label>
+                <div id="emailContainer" class="space-y-2 mt-2"></div>
+                <button type="button" id="addEmail" class="text-blue-600 text-sm hover:text-blue-800 flex items-center mt-2">
+                    <i class="fas fa-plus mr-1"></i> Thêm email
+                </button>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Website</label>
+                <div id="webContainer" class="space-y-2 mt-2"></div>
+                <button type="button" id="addWeb" class="text-blue-600 text-sm hover:text-blue-800 flex items-center mt-2">
+                    <i class="fas fa-plus mr-1"></i> Thêm website
+                </button>
+            </div>
+
+            <div class="flex justify-end space-x-2">
+                <a asp-page="Index" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Hủy</a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Tạo</button>
             </div>
         </form>
     </div>
 </div>
 
+<div id="toastContainer" class="fixed top-4 right-4 space-y-2 z-[9999]"></div>
+
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $("#createContactForm").validate({
+                rules: {
+                    "NAME": {
+                        required: true,
+                        maxlength: 255
+                    }
+                },
+                messages: {
+                    "NAME": {
+                        required: "Vui lòng nhập tên liên hệ",
+                        maxlength: "Tên không được vượt quá 255 ký tự"
+                    }
+                },
+                errorPlacement: function (error, element) {
+                    error.insertAfter(element);
+                },
+                highlight: function (element) {
+                    $(element).addClass("border-red-500").removeClass("border-gray-300");
+                },
+                unhighlight: function (element) {
+                    $(element).removeClass("border-red-500").addClass("border-gray-300");
+                }
+            });
+
+            const fieldOptions = {
+                PHONE: ["WORK", "MOBILE", "FAX", "HOME", "PAGER", "MAILING", "OTHER"],
+                EMAIL: ["WORK", "HOME", "MAILING", "OTHER"],
+                WEB: ["WORK", "HOME", "FACEBOOK", "VK", "LIVEJOURNAL", "TWITTER", "OTHER"]
+            };
+
+            function addField(containerId, typeId) {
+                const $container = $(`#${containerId}`);
+                const index = $container.children().length;
+
+                const $field = $(`
+                    <div class="flex items-center space-x-2">
+                        <select name="${typeId}[${index}].VALUE_TYPE" class="border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 w-32">
+                            ${fieldOptions[typeId].map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                        </select>
+                        <input type="text" name="${typeId}[${index}].VALUE" class="border border-gray-300 rounded-md py-2 px-3 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nhập ${typeId.toLowerCase()}" />
+                        <input type="hidden" name="${typeId}[${index}].TYPE_ID" value="${typeId}" />
+                        <button type="button" class="text-red-500 hover:text-red-700 remove-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `);
+
+                $container.append($field);
+
+                $field.find(`input[name='${typeId}[${index}].VALUE']`).rules("add", {
+                    required: true,
+                    messages: {
+                        required: "Vui lòng nhập giá trị"
+                    }
+                });
+            }
+
+            $(document).on('click', '.remove-btn', function () {
+                $(this).parent().remove();
+            });
+
+            $('#addPhone').click(() => addField('phoneContainer', 'PHONE'));
+            $('#addEmail').click(() => addField('emailContainer', 'EMAIL'));
+            $('#addWeb').click(() => addField('webContainer', 'WEB'));
+
+            function showToast(message, type = 'success') {
+                const toast = $(`
+                    <div class="px-4 py-2 rounded shadow text-white animate-fade-in-down ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}">
+                        ${message}
+                    </div>
+                `);
+                $('#toastContainer').append(toast);
+                setTimeout(() => toast.fadeOut(500, () => toast.remove()), 3000);
+            }
+
+            $("#createContactForm").submit(function (e) {
+                e.preventDefault();
+                if (!$(this).valid()) {
+                    showToast("Vui lòng kiểm tra lại các trường dữ liệu.", "error");
+                    return;
+                }
+                $.ajax({
+                    url: window.location.href,
+                    type: "POST",
+                    data: $(this).serialize(),
+                    headers: {
+                        "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            showToast("Tạo liên hệ thành công!", "success");
+                            window.location.href = "/Detail/" + response.id;
+                        } else {
+                            showToast(response.message || "Đã xảy ra lỗi khi tạo liên hệ.", "error");
+                        }
+                    },
+                    error: function () {
+                        showToast("Có lỗi xảy ra khi gửi yêu cầu.", "error");
+                    }
+                });
+            });
+        });
+    </script>
 }
