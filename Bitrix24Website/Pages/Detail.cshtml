@@ -785,6 +785,7 @@ data-entity-id=${item.entitY_ID} class="btn-delete-address bg-red-500 text-white
                 if (hiddenIdInput.length > 0) {
                     const valueInput = parent.find('input[name$=".VALUE"]');
                     valueInput.val('');
+                    valueInput.removeAttr('required');
                     parent.addClass('hidden');
                 } else {
                     parent.remove();
